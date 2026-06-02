@@ -1,0 +1,36 @@
+# 환경변수 (절대 커밋 금지!)
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# 데이터베이스
+*.db
+*.sqlite
+data/
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# 빌드
+frontend/dist/
+backend/.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

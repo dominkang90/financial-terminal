@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: finterminal-backend
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/financial_terminal.db
+    ports:
+      - "8000:8000"
+    networks:
+      - finterminal
+
+  frontend:
+    build: ./frontend
+    container_name: finterminal-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - finterminal
+
+networks:
+  finterminal:
+    driver: bridge
+
+# PostgreSQL 사용 시 아래 주석 해제
+# postgres:
+#   image: postgres:16-alpine
+#   environment:
+#     POSTGRES_DB: finterminal
+#     POSTGRES_USER: finterminal
+#     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+#   volumes:
+#     - pgdata:/var/lib/postgresql/data
+#   networks:
+#     - finterminal
+#
+# volumes:
+#   pgdata:

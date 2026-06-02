@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: finterminal-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./financial_terminal.db
+      - key: CORS_ORIGINS
+        value: '["https://finterminal.vercel.app","https://*.vercel.app"]'
+      - key: DEBUG
+        value: "false"
+      # 아래는 Render 대시보드에서 직접 입력하세요
+      # - key: GEMINI_API_KEY
+      #   value: YOUR_GEMINI_KEY
+      # - key: FINNHUB_API_KEY
+      #   value: YOUR_FINNHUB_KEY

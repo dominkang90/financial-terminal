@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 터미널 스크롤바 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #e0e0e0;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자 폰트는 항상 JetBrains Mono */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 선택 색상 */
+::selection {
+  background: rgba(255, 102, 0, 0.3);
+  color: #fff;
+}
+
+/* 트레이딩뷰 차트 컨테이너 */
+.tv-chart-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* 그리드 레이아웃 react-grid-layout */
+.react-grid-layout {
+  position: relative;
+}
+.react-grid-item {
+  transition: none;
+  border: 1px solid #1a1a1a;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+.react-grid-item.react-grid-placeholder {
+  background: rgba(255, 102, 0, 0.1);
+  border: 1px dashed rgba(255, 102, 0, 0.4);
+}
+.react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.react-grid-item:hover .react-resizable-handle {
+  opacity: 1;
+}
+.react-resizable-handle::after {
+  border-color: #ff6600 !important;
+}

@@ -1,6 +1,6 @@
 """
-뉴스 서비스: Yahoo Finance RSS (무료) + Finnhub (API 키 선택).
-AI 번역은 Gemini API 키가 있을 때만 동작.
+뉴스 서비스: Yahoo Finance RSS + Finnhub
+자동 한국어 번역: MyMemory API (무료, API 키 불필요, 일 5000단어)
 """
 import asyncio
 import time
@@ -13,12 +13,7 @@ import httpx
 from app.core.config import settings
 
 _news_cache: TTLCache = TTLCache(maxsize=200, ttl=settings.NEWS_CACHE_TTL)
-
-# Yahoo Finance RSS 피드 (무료, API 키 불필요)
-YAHOO_RSS_FEEDS = {
-    "market": "https://finance.yahoo.com/news/rssindex",
-    "us_market": "https://finance.yahoo.com/rss/topstories",
-}
+_translate_cache: TTLCache = TTLCache(maxsize=1000, ttl=3600)  # 번역 1시간 캐시
 
 
 def _clean_html(text: str) -> str:
@@ -29,17 +24,21 @@ def _clean_html(text: str) -> str:
 
 def _extract_tickers(text: str) -> List[str]:
     tickers = re.findall(r'\b([A-Z]{1,5})\b', text)
-    # 일반 영어 단어 필터링
-    stopwords = {"THE", "AND", "FOR", "ARE", "BUT", "NOT", "YOU", "ALL", "CAN", "HER",
-                 "WAS", "ONE", "OUR", "OUT", "WHO", "HIS", "HAS", "ITS", "NEW", "NOW",
-                 "CEO", "CFO", "SEC", "ETF", "IPO", "FED", "GDP", "CPI", "PCE", "US",
-                 "WILL", "FROM", "WITH", "THIS", "THAT", "THEY", "BEEN", "HAVE"}
+    stopwords = {
+        "THE", "AND", "FOR", "ARE", "BUT", "NOT", "YOU", "ALL", "CAN", "HER",
+        "WAS", "ONE", "OUR", "OUT", "WHO", "HIS", "HAS", "ITS", "NEW", "NOW",
+        "CEO", "CFO", "SEC", "ETF", "IPO", "FED", "GDP", "CPI", "PCE", "US",
+        "WILL", "FROM", "WITH", "THIS", "THAT", "THEY", "BEEN", "HAVE", "AI",
+        "INTO", "OVER", "THAN", "THEN", "WHEN", "WHAT", "SAYS", "SAID",
+    }
     return list(set(t for t in tickers if t not in stopwords and len(t) >= 2))[:5]
 
 
 def _sentiment_score(text: str) -> str:
-    positive = ["surge", "rally", "gain", "rise", "beat", "record", "growth", "profit", "strong", "upgrade", "bullish"]
-    negative = ["fall", "drop", "plunge", "decline", "miss", "loss", "weak", "downgrade", "bearish", "cut", "layoff"]
+    positive = ["surge", "rally", "gain", "rise", "beat", "record", "growth",
+                "profit", "strong", "upgrade", "bullish", "jump", "soar", "high"]
+    negative = ["fall", "drop", "plunge", "decline", "miss", "loss", "weak",
+                "downgrade", "bearish", "cut", "layoff", "crash", "low", "sell"]
     text_lower = text.lower()
     pos = sum(1 for w in positive if w in text_lower)
     neg = sum(1 for w in negative if w in text_lower)
@@ -48,6 +47,96 @@ def _sentiment_score(text: str) -> str:
     elif neg > pos + 1:
         return "negative"
     return "neutral"
+
+
+def _extract_image_from_entry(entry: Any) -> Optional[str]:
+    """RSS 항목에서 이미지 URL 추출"""
+    # media:content
+    if hasattr(entry, "media_content") and entry.media_content:
+        for m in entry.media_content:
+            url = m.get("url", "")
+            if url and any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                return url
+
+    # media:thumbnail
+    if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
+        url = entry.media_thumbnail[0].get("url", "")
+        if url:
+            return url
+
+    # enclosures
+    if hasattr(entry, "enclosures") and entry.enclosures:
+        for enc in entry.enclosures:
+            if "image" in enc.get("type", ""):
+                return enc.get("href", "")
+
+    # summary에서 img 태그 추출
+    summary = entry.get("summary", "")
+    if summary:
+        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary)
+        if match:
+            return match.group(1)
+
+    return None
+
+
+async def _translate_mymemory(text: str) -> Optional[str]:
+    """MyMemory 무료 번역 API (API 키 불필요, 일 5000단어)"""
+    if not text or len(text) < 5:
+        return None
+
+    cache_key = f"tr:{text[:100]}"
+    if cache_key in _translate_cache:
+        return _translate_cache[cache_key]
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                "https://api.mymemory.translated.net/get",
+                params={
+                    "q": text[:500],
+                    "langpair": "en|ko",
+                    "de": "rkdtkdwhd@gmail.com",  # 이메일 추가하면 일 10000단어
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                translated = data.get("responseData", {}).get("translatedText", "")
+                if translated and translated != text:
+                    _translate_cache[cache_key] = translated
+                    return translated
+    except Exception:
+        pass
+    return None
+
+
+async def _translate_gemini(text: str, api_key: str) -> Optional[str]:
+    """Gemini 번역 (API 키 있을 때 우선 사용)"""
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = await asyncio.to_thread(
+            model.generate_content,
+            f"다음 영문 금융 뉴스 제목을 자연스러운 한국어로 번역해줘. 번역문만 출력해:\n\n{text}"
+        )
+        return response.text.strip()
+    except Exception:
+        return None
+
+
+async def translate_article(title: str, summary: str = "", user_api_key: Optional[str] = None) -> Dict[str, Optional[str]]:
+    """제목과 요약 번역"""
+    gemini_key = user_api_key or settings.GEMINI_API_KEY
+
+    if gemini_key:
+        title_kr = await _translate_gemini(title, gemini_key)
+        summary_kr = await _translate_gemini(summary[:300], gemini_key) if summary else None
+    else:
+        title_kr = await _translate_mymemory(title)
+        summary_kr = await _translate_mymemory(summary[:300]) if summary else None
+
+    return {"title_ko": title_kr, "summary_ko": summary_kr}
 
 
 async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict]:
@@ -60,30 +149,44 @@ async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[
         if symbol:
             url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
         else:
-            url = YAHOO_RSS_FEEDS["us_market"]
+            url = "https://finance.yahoo.com/rss/topstories"
 
         feed = await asyncio.to_thread(feedparser.parse, url)
-        for entry in feed.entries[:limit]:
-            summary = _clean_html(entry.get("summary", ""))
+
+        # 번역 병렬 처리
+        async def process_entry(entry):
             title = entry.get("title", "")
-            articles.append({
+            summary = _clean_html(entry.get("summary", ""))[:300]
+            image = _extract_image_from_entry(entry)
+            translation = await translate_article(title, summary)
+
+            return {
                 "id": entry.get("id", entry.get("link", "")),
                 "title": title,
-                "summary": summary[:300] if summary else "",
+                "title_ko": translation.get("title_ko"),
+                "summary": summary,
+                "summary_ko": translation.get("summary_ko"),
                 "url": entry.get("link", ""),
                 "published_at": entry.get("published", ""),
-                "source": entry.get("source", {}).get("title", "Yahoo Finance") if isinstance(entry.get("source"), dict) else "Yahoo Finance",
+                "source": "Yahoo Finance",
+                "image": image,
                 "tickers": _extract_tickers(title + " " + summary),
                 "sentiment": _sentiment_score(title + " " + summary),
-                "importance": "high" if any(w in title.lower() for w in ["fed", "earnings", "crash", "rally", "recession"]) else "normal",
+                "importance": "high" if any(
+                    w in title.lower() for w in ["fed", "earnings", "crash", "rally", "recession", "rate"]
+                ) else "normal",
                 "data_source": "yahoo_rss",
-                "translation": None,  # AI 번역 필요 시 별도 API 호출
-            })
-    except Exception as e:
-        articles = [{"data_status": "error", "error": str(e)}]
+            }
 
-    _news_cache[cache_key] = articles
-    return articles
+        tasks = [process_entry(e) for e in feed.entries[:limit]]
+        articles = await asyncio.gather(*tasks)
+        articles = [a for a in articles if a]
+
+    except Exception as e:
+        articles = []
+
+    _news_cache[cache_key] = list(articles)
+    return list(articles)
 
 
 async def get_finnhub_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict]:
@@ -99,55 +202,42 @@ async def get_finnhub_news(symbol: Optional[str] = None, limit: int = 30) -> Lis
         today = datetime.now().strftime("%Y-%m-%d")
         week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10) as client:
             if symbol:
                 url = f"https://finnhub.io/api/v1/company-news?symbol={symbol}&from={week_ago}&to={today}&token={settings.FINNHUB_API_KEY}"
             else:
                 url = f"https://finnhub.io/api/v1/news?category=general&token={settings.FINNHUB_API_KEY}"
-
-            resp = await client.get(url, timeout=10)
+            resp = await client.get(url)
             data = resp.json()
 
-        articles = []
-        for item in data[:limit]:
+        async def process_item(item):
             title = item.get("headline", "")
-            summary = item.get("summary", "")
-            articles.append({
+            summary = item.get("summary", "")[:300]
+            translation = await translate_article(title, summary)
+            return {
                 "id": str(item.get("id", "")),
                 "title": title,
-                "summary": summary[:300],
+                "title_ko": translation.get("title_ko"),
+                "summary": summary,
+                "summary_ko": translation.get("summary_ko"),
                 "url": item.get("url", ""),
                 "published_at": str(item.get("datetime", "")),
                 "source": item.get("source", "Finnhub"),
+                "image": item.get("image") or None,
                 "tickers": [item["related"]] if item.get("related") else _extract_tickers(title),
                 "sentiment": _sentiment_score(title + summary),
                 "importance": "normal",
                 "data_source": "finnhub",
-                "image": item.get("image"),
-                "translation": None,
-            })
+            }
 
-        _news_cache[cache_key] = articles
-        return articles
+        tasks = [process_item(item) for item in data[:limit]]
+        articles = await asyncio.gather(*tasks)
+        articles = [a for a in articles if a]
+        _news_cache[cache_key] = list(articles)
+        return list(articles)
+
     except Exception:
         return []
-
-
-async def translate_with_gemini(text: str, api_key: Optional[str] = None) -> Optional[str]:
-    key = api_key or settings.GEMINI_API_KEY
-    if not key:
-        return None
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = await asyncio.to_thread(
-            model.generate_content,
-            f"다음 영문 금융 뉴스를 한국어로 간결하게 번역해줘. 투자자 관점에서 핵심만 요약해줘:\n\n{text[:800]}"
-        )
-        return response.text
-    except Exception:
-        return None
 
 
 async def get_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict]:
@@ -155,3 +245,11 @@ async def get_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict]:
     if finnhub:
         return finnhub
     return await get_yahoo_news(symbol, limit)
+
+
+async def translate_with_gemini(text: str, api_key: Optional[str] = None) -> Optional[str]:
+    key = api_key or settings.GEMINI_API_KEY
+    if not key:
+        result = await _translate_mymemory(text)
+        return result
+    return await _translate_gemini(text, key)

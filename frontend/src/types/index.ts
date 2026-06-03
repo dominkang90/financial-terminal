@@ -50,7 +50,9 @@ export interface ChartData {
 export interface NewsArticle {
   id: string;
   title: string;
+  title_ko?: string | null;
   summary: string;
+  summary_ko?: string | null;
   url: string;
   published_at: string;
   source: string;
@@ -58,7 +60,7 @@ export interface NewsArticle {
   sentiment: "positive" | "negative" | "neutral";
   importance: "high" | "normal";
   data_source: string;
-  image?: string;
+  image?: string | null;
   translation?: string | null;
 }
 

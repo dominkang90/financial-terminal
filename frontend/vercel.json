@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://finterminal-backend.onrender.com/api/:path*"
+      "destination": "https://financial-terminal-p909.onrender.com/api/:path*"
     }
   ],
   "headers": [

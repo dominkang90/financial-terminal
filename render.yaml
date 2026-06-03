@@ -12,7 +12,7 @@ services:
       - key: DATABASE_URL
         value: sqlite+aiosqlite:///./financial_terminal.db
       - key: CORS_ORIGINS
-        value: '["https://finterminal.vercel.app","https://*.vercel.app"]'
+        value: '["https://financial-terminal-six.vercel.app","https://*.vercel.app","https://financial-terminal-p909.onrender.com"]'
       - key: DEBUG
         value: "false"
       # 아래는 Render 대시보드에서 직접 입력하세요

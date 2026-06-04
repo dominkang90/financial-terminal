@@ -108,6 +108,15 @@ async def _fetch_yahoo_quote_http(symbol: str) -> Optional[Dict]:
         change = price - prev_close
         change_pct = (change / prev_close * 100) if prev_close else 0.0
 
+        # fundamental 데이터 보완 (yfinance.info)
+        try:
+            import yfinance as yf
+            info = await asyncio.to_thread(lambda: yf.Ticker(symbol).info) or {}
+        except Exception:
+            info = {}
+
+        open_price = _safe_float(meta.get("regularMarketOpen")) or _safe_float(info.get("open"))
+
         return {
             "symbol": symbol.upper(),
             "name": meta.get("longName") or meta.get("shortName", symbol),
@@ -115,19 +124,19 @@ async def _fetch_yahoo_quote_http(symbol: str) -> Optional[Dict]:
             "change": round(change, 4),
             "change_pct": round(change_pct, 4),
             "prev_close": round(prev_close, 4),
-            "open": _safe_float(meta.get("regularMarketOpen")),
+            "open": open_price,
             "high": _safe_float(meta.get("regularMarketDayHigh")),
             "low": _safe_float(meta.get("regularMarketDayLow")),
             "volume": int(_safe_float(meta.get("regularMarketVolume"))),
-            "avg_volume": 0,
-            "market_cap": None,
-            "pe_ratio": None,
-            "eps": None,
-            "dividend_yield": None,
+            "avg_volume": int(_safe_float(info.get("averageVolume"))),
+            "market_cap": info.get("marketCap"),
+            "pe_ratio": info.get("trailingPE"),
+            "eps": info.get("trailingEps"),
+            "dividend_yield": (info["dividendYield"] / 100) if info.get("dividendYield") else None,
             "52w_high": _safe_float(meta.get("fiftyTwoWeekHigh")),
             "52w_low": _safe_float(meta.get("fiftyTwoWeekLow")),
-            "sector": None,
-            "industry": None,
+            "sector": info.get("sector"),
+            "industry": info.get("industry"),
             "currency": meta.get("currency", "USD"),
             "exchange": meta.get("exchangeName", ""),
             "data_source": "yahoo_http",

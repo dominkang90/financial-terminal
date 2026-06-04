@@ -31,8 +31,20 @@ interface MarketState {
   removeFromWatchlist: (symbol: string) => void;
 }
 
+const getInitialSymbol = (): string => {
+  if (typeof window === "undefined") return "AAPL";
+  return new URLSearchParams(window.location.search).get("symbol")?.toUpperCase() || "AAPL";
+};
+
+const syncUrl = (symbol: string) => {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("symbol", symbol);
+  window.history.replaceState(null, "", url.toString());
+};
+
 export const useMarketStore = create<MarketState>((set, get) => ({
-  activeSymbol: "AAPL",
+  activeSymbol: getInitialSymbol(),
   indices: {},
   forex: {},
   commodities: {},
@@ -47,6 +59,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setActiveSymbol: (symbol) => {
     set({ activeSymbol: symbol });
+    syncUrl(symbol);
     const { chartPeriod, chartInterval } = get();
     get().fetchChart(symbol, chartPeriod, chartInterval);
     get().fetchQuote(symbol);

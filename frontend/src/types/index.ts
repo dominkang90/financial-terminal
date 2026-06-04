@@ -61,6 +61,9 @@ export interface NewsArticle {
   importance: "high" | "normal";
   data_source: string;
   image?: string | null;
+  video_url?: string | null;
+  video_thumbnail?: string | null;
+  media_type?: "article" | "video";
   translation?: string | null;
 }
 

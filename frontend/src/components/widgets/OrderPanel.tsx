@@ -16,6 +16,7 @@ export function OrderPanel() {
   const [price, setPrice] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
   const quote = quotes[activeSymbol];
   const currentPrice = quote?.price ?? 0;
@@ -25,9 +26,14 @@ export function OrderPanel() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error("주문하려면 로그인이 필요합니다");
+      const message = "주문하려면 먼저 로그인해야 합니다. 로그인 창을 열어드릴게요.";
+      setAuthNotice(message);
+      toast.error(message);
+      window.dispatchEvent(new Event("open-auth-modal"));
       return;
     }
+
+    setAuthNotice(null);
 
     const isPaper = !enableRealTrading;
 
@@ -181,6 +187,12 @@ export function OrderPanel() {
           <span className="text-2xs text-terminal-text-dim font-mono">예상 금액</span>
           <span className="text-xs font-mono text-terminal-text-primary font-semibold">${total}</span>
         </div>
+
+        {!user && authNotice && (
+          <div className="rounded border border-terminal-red/40 bg-terminal-red/10 px-2.5 py-2 text-2xs font-mono text-terminal-red">
+            {authNotice}
+          </div>
+        )}
 
         <button
           type="submit"

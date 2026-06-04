@@ -15,8 +15,8 @@ export function MarketsPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* 왼쪽 패널: 관심종목 + 시장 데이터 */}
-      <div className="w-56 flex-shrink-0 flex flex-col border-r border-terminal-border overflow-hidden">
+      {/* 왼쪽 패널 - 데스크톱만 */}
+      <div className="hidden md:flex w-56 flex-shrink-0 flex-col border-r border-terminal-border overflow-hidden">
         <div className="h-60 flex-shrink-0 border-b border-terminal-border overflow-hidden">
           <WatchList />
         </div>
@@ -25,7 +25,7 @@ export function MarketsPage() {
         </div>
       </div>
 
-      {/* 중앙 패널: 차트 */}
+      {/* 중앙 패널 */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-hidden">
           <StockChart />
@@ -35,8 +35,8 @@ export function MarketsPage() {
         </div>
       </div>
 
-      {/* 오른쪽 패널: 시세 상세 */}
-      <div className="w-48 flex-shrink-0 border-l border-terminal-border overflow-hidden">
+      {/* 오른쪽 패널 - 데스크톱만 */}
+      <div className="hidden lg:block w-48 flex-shrink-0 border-l border-terminal-border overflow-hidden">
         <QuotePanel />
       </div>
     </div>

@@ -49,35 +49,86 @@ def _sentiment_score(text: str) -> str:
     return "neutral"
 
 
-def _extract_image_from_entry(entry: Any) -> Optional[str]:
-    """RSS 항목에서 이미지 URL 추출"""
-    # media:content
+def _extract_youtube_id(url: str) -> Optional[str]:
+    """URL에서 YouTube 영상 ID 추출"""
+    patterns = [
+        r'youtube\.com/watch\?v=([^&\s]+)',
+        r'youtu\.be/([^?\s]+)',
+        r'youtube\.com/embed/([^?\s]+)',
+        r'youtube\.com/shorts/([^?\s]+)',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _extract_media_from_entry(entry: Any) -> dict:
+    """RSS 항목에서 이미지/영상 정보 추출"""
+    result = {"image": None, "video_url": None, "video_thumbnail": None, "media_type": "article"}
+
+    # 링크에서 YouTube 감지
+    link = entry.get("link", "")
+    yt_id = _extract_youtube_id(link)
+    if yt_id:
+        result["video_url"] = link
+        result["video_thumbnail"] = f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg"
+        result["media_type"] = "video"
+        return result
+
+    # media:content에서 영상/이미지 감지
     if hasattr(entry, "media_content") and entry.media_content:
         for m in entry.media_content:
             url = m.get("url", "")
-            if url and any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
-                return url
+            media_type = m.get("type", "")
+            if "video" in media_type or url.endswith((".mp4", ".m3u8")):
+                yt_id = _extract_youtube_id(url)
+                if yt_id:
+                    result["video_url"] = url
+                    result["video_thumbnail"] = f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg"
+                else:
+                    result["video_url"] = url
+                    result["video_thumbnail"] = m.get("thumbnail", {}).get("url")
+                result["media_type"] = "video"
+                return result
+            elif url and any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                result["image"] = url
 
     # media:thumbnail
     if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
         url = entry.media_thumbnail[0].get("url", "")
-        if url:
-            return url
+        if url and not result["image"]:
+            result["image"] = url
 
     # enclosures
     if hasattr(entry, "enclosures") and entry.enclosures:
         for enc in entry.enclosures:
-            if "image" in enc.get("type", ""):
-                return enc.get("href", "")
+            enc_type = enc.get("type", "")
+            href = enc.get("href", "")
+            if "video" in enc_type:
+                result["video_url"] = href
+                result["media_type"] = "video"
+                return result
+            elif "image" in enc_type and not result["image"]:
+                result["image"] = href
 
-    # summary에서 img 태그 추출
+    # summary에서 img 태그 및 YouTube iframe 추출
     summary = entry.get("summary", "")
     if summary:
-        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary)
-        if match:
-            return match.group(1)
+        yt_match = re.search(r'youtube\.com/embed/([^?"]+)', summary)
+        if yt_match:
+            yt_id = yt_match.group(1)
+            result["video_url"] = f"https://www.youtube.com/watch?v={yt_id}"
+            result["video_thumbnail"] = f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg"
+            result["media_type"] = "video"
+            return result
 
-    return None
+        img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary)
+        if img_match and not result["image"]:
+            result["image"] = img_match.group(1)
+
+    return result
 
 
 async def _translate_mymemory(text: str) -> Optional[str]:
@@ -157,7 +208,7 @@ async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[
         async def process_entry(entry):
             title = entry.get("title", "")
             summary = _clean_html(entry.get("summary", ""))[:300]
-            image = _extract_image_from_entry(entry)
+            media = _extract_media_from_entry(entry)
             translation = await translate_article(title, summary)
 
             return {
@@ -169,7 +220,10 @@ async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[
                 "url": entry.get("link", ""),
                 "published_at": entry.get("published", ""),
                 "source": "Yahoo Finance",
-                "image": image,
+                "image": media.get("image"),
+                "video_url": media.get("video_url"),
+                "video_thumbnail": media.get("video_thumbnail"),
+                "media_type": media.get("media_type", "article"),
                 "tickers": _extract_tickers(title + " " + summary),
                 "sentiment": _sentiment_score(title + " " + summary),
                 "importance": "high" if any(

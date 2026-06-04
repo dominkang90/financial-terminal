@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
 import type { TabId } from "@/types";
 import { TopBar } from "@/components/TopBar/TopBar";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { MarketsPage } from "@/components/pages/MarketsPage";
 import { ChartPage } from "@/components/pages/ChartPage";
 import { NewsPage } from "@/components/pages/NewsPage";
@@ -35,9 +36,10 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-terminal-bg text-terminal-text-primary">
       <TopBar activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden pb-14 md:pb-0">
         {renderPage()}
       </main>
+      <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <Toaster
         position="bottom-right"

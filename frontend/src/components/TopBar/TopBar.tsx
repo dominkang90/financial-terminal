@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart2, Briefcase, BookOpen, Wrench, Bot,
   LogIn, LogOut, Settings, Bell, User, ChevronDown,
@@ -15,14 +15,14 @@ interface TopBarProps {
   onTabChange: (tab: TabId) => void;
 }
 
-const NAV_ITEMS: { id: TabId; label: string; icon: typeof BarChart2 }[] = [
-  { id: "markets", label: "Markets", icon: BarChart2 },
-  { id: "chart", label: "Chart", icon: BarChart2 },
-  { id: "portfolio", label: "Portfolio", icon: Briefcase },
-  { id: "news", label: "News", icon: BookOpen },
-  { id: "options", label: "Options", icon: Wrench },
-  { id: "orders", label: "Orders", icon: Wrench },
-  { id: "ai", label: "AI", icon: Bot },
+export const NAV_ITEMS: { id: TabId; label: string; labelKo: string; icon: typeof BarChart2 }[] = [
+  { id: "markets", label: "Markets", labelKo: "시장", icon: BarChart2 },
+  { id: "chart", label: "Chart", labelKo: "차트", icon: BarChart2 },
+  { id: "portfolio", label: "Portfolio", labelKo: "포트폴리오", icon: Briefcase },
+  { id: "news", label: "News", labelKo: "뉴스", icon: BookOpen },
+  { id: "options", label: "Options", labelKo: "옵션", icon: Wrench },
+  { id: "orders", label: "Orders", labelKo: "주문", icon: Wrench },
+  { id: "ai", label: "AI", labelKo: "AI", icon: Bot },
 ];
 
 export function TopBar({ activeTab, onTabChange }: TopBarProps) {
@@ -30,6 +30,12 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    const openAuthModal = () => setShowAuth(true);
+    window.addEventListener("open-auth-modal", openAuthModal);
+    return () => window.removeEventListener("open-auth-modal", openAuthModal);
+  }, []);
 
   return (
     <div className="flex flex-col flex-shrink-0 bg-terminal-bg border-b border-terminal-border">
@@ -43,9 +49,9 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
           <span className="text-xs font-bold text-terminal-accent font-mono hidden sm:block">FinTerminal</span>
         </div>
 
-        {/* 내비게이션 탭 */}
-        <nav className="flex items-center gap-0.5 flex-shrink-0">
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+        {/* 내비게이션 탭 - 데스크톱만 표시 */}
+        <nav className="hidden md:flex items-center gap-0.5 flex-shrink-0">
+          {NAV_ITEMS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => onTabChange(id)}

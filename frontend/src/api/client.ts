@@ -58,7 +58,7 @@ export const marketApi = {
 // ── 뉴스 ──────────────────────────────────────────────────
 export const newsApi = {
   list: (symbol?: string, limit = 30): Promise<NewsArticle[]> =>
-    api.get("/news/", { params: { symbol, limit } }).then((r) => r.data),
+    api.get("/news", { params: { symbol, limit } }).then((r) => r.data),
 
   translate: (text: string, apiKey?: string): Promise<{ translation: string | null }> =>
     api.post("/news/translate", { text, api_key: apiKey }).then((r) => r.data),

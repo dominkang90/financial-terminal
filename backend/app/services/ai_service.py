@@ -23,6 +23,9 @@ def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
     symbol = quote.get("symbol", "")
     price = quote.get("price", 0)
     name = quote.get("name", symbol)
+    currency = quote.get("currency") or "USD"
+    cs = "₩" if currency == "KRW" else "¥" if currency == "JPY" else "$"
+    dec = 0 if currency in ("KRW", "JPY") else 2
 
     direction = "상승" if change_pct > 0 else "하락"
     abs_pct = abs(change_pct)
@@ -30,7 +33,7 @@ def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
     lines = [
         f"📊 **{name}({symbol}) 간단 분석** (규칙 기반 — Gemini API 키 없음)",
         f"",
-        f"현재가: ${price:,.2f}  |  전일 대비: {'+' if change_pct > 0 else ''}{change_pct:.2f}%",
+        f"현재가: {cs}{price:,.{dec}f}  |  전일 대비: {'+' if change_pct > 0 else ''}{change_pct:.2f}%",
         f"",
     ]
 
@@ -92,11 +95,13 @@ async def analyze_stock(
 
         quote_str = ""
         if quote:
+            cur = quote.get("currency") or "USD"
+            cs = "₩" if cur == "KRW" else "¥" if cur == "JPY" else "$"
             quote_str = f"""
-현재가: ${quote.get('price', 'N/A'):,}
+현재가: {cs}{quote.get('price', 'N/A'):,} ({cur})
 전일 대비: {quote.get('change_pct', 0):+.2f}%
-52주 고가: ${quote.get('52w_high', 'N/A')}
-52주 저가: ${quote.get('52w_low', 'N/A')}
+52주 고가: {cs}{quote.get('52w_high', 'N/A')}
+52주 저가: {cs}{quote.get('52w_low', 'N/A')}
 P/E: {quote.get('pe_ratio', 'N/A')}
 섹터: {quote.get('sector', 'N/A')}
 """

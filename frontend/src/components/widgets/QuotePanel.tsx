@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMarketStore } from "@/store/marketStore";
 import { ChangeValue, DataStatusBadge, formatNumber } from "@/components/common/DataStatus";
+import { AISummary } from "@/components/widgets/AISummary";
 
 export function QuotePanel() {
   const { activeSymbol, quotes, fetchQuote } = useMarketStore();
@@ -84,6 +85,9 @@ export function QuotePanel() {
           </div>
         ))}
       </div>
+
+      {/* AI 요약 */}
+      <AISummary />
     </div>
   );
 }

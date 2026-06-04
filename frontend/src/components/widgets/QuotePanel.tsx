@@ -30,19 +30,22 @@ export function QuotePanel() {
     );
   }
 
+  const cs = quote.currency === "KRW" ? "₩" : quote.currency === "JPY" ? "¥" : "$";
+  const pd = quote.currency === "KRW" || quote.currency === "JPY" ? 0 : 2;
+
   const rows: [string, string][] = [
-    ["시가", `$${formatNumber(quote.open)}`],
-    ["고가", `$${formatNumber(quote.high)}`],
-    ["저가", `$${formatNumber(quote.low)}`],
-    ["전일종가", `$${formatNumber(quote.prev_close)}`],
+    ["시가", `${cs}${formatNumber(quote.open, pd)}`],
+    ["고가", `${cs}${formatNumber(quote.high, pd)}`],
+    ["저가", `${cs}${formatNumber(quote.low, pd)}`],
+    ["전일종가", `${cs}${formatNumber(quote.prev_close, pd)}`],
     ["거래량", formatNumber(quote.volume ?? 0, 0)],
     ["평균거래량", formatNumber(quote.avg_volume ?? 0, 0)],
     ["시총", quote.market_cap ? formatNumber(quote.market_cap, 0) : "—"],
     ["P/E", quote.pe_ratio ? formatNumber(quote.pe_ratio) : "—"],
-    ["EPS", quote.eps ? `$${formatNumber(quote.eps)}` : "—"],
+    ["EPS", quote.eps ? `${cs}${formatNumber(quote.eps, pd)}` : "—"],
     ["배당수익률", quote.dividend_yield ? `${(quote.dividend_yield * 100).toFixed(2)}%` : "—"],
-    ["52주 고가", quote["52w_high"] ? `$${formatNumber(quote["52w_high"])}` : "—"],
-    ["52주 저가", quote["52w_low"] ? `$${formatNumber(quote["52w_low"])}` : "—"],
+    ["52주 고가", quote["52w_high"] ? `${cs}${formatNumber(quote["52w_high"], pd)}` : "—"],
+    ["52주 저가", quote["52w_low"] ? `${cs}${formatNumber(quote["52w_low"], pd)}` : "—"],
     ["섹터", quote.sector ?? "—"],
     ["거래소", quote.exchange ?? "—"],
   ];
@@ -61,7 +64,7 @@ export function QuotePanel() {
 
         <div className="mt-2">
           <span className="text-xl font-bold font-mono text-terminal-text-primary">
-            ${formatNumber(quote.price)}
+            {cs}{formatNumber(quote.price, pd)}
           </span>
           <span className="text-xs text-terminal-text-dim font-mono ml-1">{quote.currency}</span>
         </div>

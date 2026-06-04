@@ -362,6 +362,32 @@ async def get_chart_data(
 
 
 async def search_symbols(query: str, limit: int = 20) -> List[Dict]:
+    query = query.strip()
+    if not query:
+        return []
+
+    # 1) 6자리 숫자 → 한국 종목 코드 (.KS 우선, .KQ 폴백)
+    if query.isdigit() and len(query) == 6:
+        for sym in [f"{query}.KS", f"{query}.KQ"]:
+            q = await get_quote(sym)
+            if q.get("data_status") != "error" and (q.get("price") or 0) > 0:
+                return [{
+                    "symbol": sym,
+                    "name": q.get("name", sym),
+                    "exchange": q.get("exchange", ""),
+                    "type": "EQUITY",
+                }]
+
+    # 2) 한글 포함 시 영문 번역해서 검색
+    if any("가" <= ch <= "힣" for ch in query):
+        try:
+            from deep_translator import GoogleTranslator
+            translated = GoogleTranslator(source="ko", target="en").translate(query)
+            if translated:
+                query = translated
+        except Exception:
+            pass
+
     # Finnhub 심볼 검색 시도
     if settings.FINNHUB_API_KEY:
         try:

@@ -166,7 +166,8 @@ export function StockChart() {
           {quote && (
             <>
               <span className="text-sm font-mono text-terminal-text-primary">
-                ${formatNumber(quote.price)}
+                {quote.currency === "KRW" ? "₩" : quote.currency === "JPY" ? "¥" : "$"}
+                {formatNumber(quote.price, quote.currency === "KRW" || quote.currency === "JPY" ? 0 : 2)}
               </span>
               <ChangeValue value={quote.change_pct ?? 0} suffix="%" className="text-xs" />
             </>

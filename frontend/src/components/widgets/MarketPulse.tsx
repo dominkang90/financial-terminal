@@ -14,7 +14,10 @@ const SECTOR_ETFS: Record<string, string> = {
 };
 
 export function MarketPulse() {
-  const { quotes, fetchCommodities, fetchRates, commodities, rates, addToWatchlist } = useMarketStore();
+  const {
+    quotes, fetchCommodities, fetchRates, commodities, rates, addToWatchlist,
+    indices, fetchIndices, forex, fetchForex,
+  } = useMarketStore();
   const { fetchWatchlistQuotes } = useMarketStore();
 
   useEffect(() => {
@@ -22,17 +25,32 @@ export function MarketPulse() {
     Object.values(SECTOR_ETFS).forEach(sym => addToWatchlist(sym));
     fetchCommodities();
     fetchRates();
+    fetchIndices();
+    fetchForex();
     fetchWatchlistQuotes();
     const id = setInterval(() => {
       fetchCommodities();
       fetchRates();
+      fetchIndices();
+      fetchForex();
       fetchWatchlistQuotes();
     }, 60_000);
     return () => clearInterval(id);
-  }, [fetchCommodities, fetchRates, fetchWatchlistQuotes, addToWatchlist]);
+  }, [fetchCommodities, fetchRates, fetchIndices, fetchForex, fetchWatchlistQuotes, addToWatchlist]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
+      {/* 한국 시장 */}
+      <Section title="한국 시장">
+        {Object.entries({
+          "코스피 (KOSPI)": indices["KOSPI"],
+          "코스닥 (KOSDAQ)": indices["KOSDAQ"],
+          "원/달러": forex["USD/KRW"],
+        }).map(([label, q]) => (
+          <SectorRow key={label} label={label} q={q} pricePrefix="" />
+        ))}
+      </Section>
+
       {/* 섹터 ETF */}
       <Section title="섹터 모멘텀">
         {Object.entries(SECTOR_ETFS).map(([label, symbol]) => {

@@ -113,8 +113,8 @@ function FilterButton({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
         active
-          ? "border-[#8EF3C5]/40 bg-[#8EF3C5]/14 text-[#C5FFE3]"
-          : "border-white/10 bg-white/[0.02] text-white/55 hover:border-white/20 hover:text-white/80",
+          ? "border-[#ff6600]/45 bg-[#ff6600]/12 text-[#ffb066]"
+          : "border-[#222] bg-[#111] text-[#777] hover:border-[#333] hover:text-[#ddd]",
       )}
     >
       <span>{label}</span>
@@ -125,7 +125,7 @@ function FilterButton({
 
 function MetricCard({ title, value, hint, accent }: { title: string; value: string; hint: string; accent: string }) {
   return (
-    <Card className="rounded-[24px] bg-white/[0.035]">
+    <Card className="rounded-xl border border-[#1f1f1f] bg-[#111]">
       <CardHeader className="pb-3">
         <CardDescription>{title}</CardDescription>
         <CardTitle className={cn("text-2xl", accent)}>{value}</CardTitle>
@@ -139,7 +139,7 @@ function MetricCard({ title, value, hint, accent }: { title: string; value: stri
 
 function GuideLayerCard({ layer }: { layer: VideoDeskGuideLayer }) {
   return (
-    <Card className="rounded-[24px] bg-white/[0.03]">
+    <Card className="rounded-xl border border-[#1f1f1f] bg-[#111]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{layer.label}</CardTitle>
@@ -160,7 +160,7 @@ function GuideLayerCard({ layer }: { layer: VideoDeskGuideLayer }) {
 
 function ConsensusRow({ item }: { item: ChannelConsensusItem }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#1f1f1f] bg-[#111] px-3 py-3">
       <div className="min-w-0">
         <div className="truncate text-sm font-medium text-white">{item.source}</div>
         <div className="truncate text-[11px] text-white/45">{item.tier_label || item.layer_label || "시장 해석"}</div>
@@ -191,19 +191,19 @@ function VideoListCard({
       whileHover={{ y: -2 }}
       onClick={() => onSelect(article)}
       className={cn(
-        "group relative w-full rounded-[26px] border p-3 text-left transition duration-200",
+        "group relative w-full rounded-xl border p-3 text-left transition duration-200",
         active
-          ? "border-[#8EF3C5]/45 bg-[linear-gradient(180deg,rgba(18,30,55,0.95),rgba(11,18,35,0.98))] shadow-[0_0_0_1px_rgba(142,243,197,0.08),0_18px_35px_rgba(0,0,0,0.22)]"
-          : "border-white/8 bg-white/[0.03] hover:border-white/16 hover:bg-white/[0.045]",
+          ? "border-[#ff6600]/40 bg-[#151515] shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+          : "border-[#222] bg-[#111] hover:border-[#333] hover:bg-[#151515]",
       )}
     >
       {active && (
-        <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full border border-[#8EF3C5]/30 bg-[#8EF3C5]/12 p-2 text-[#C5FFE3] lg:flex">
+        <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full border border-[#ff6600]/30 bg-[#ff6600]/12 p-2 text-[#ffb066] lg:flex">
           <ArrowRight size={14} />
         </div>
       )}
       <div className="flex gap-4">
-        <div className="relative h-[78px] w-[112px] shrink-0 overflow-hidden rounded-[18px] border border-white/8 bg-[#0E1527] md:h-[84px] md:w-[118px]">
+        <div className="relative h-[78px] w-[112px] shrink-0 overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] md:h-[84px] md:w-[118px]">
           <img
             src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
             alt={article.title}
@@ -221,8 +221,8 @@ function VideoListCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="line-clamp-2 text-[14px] font-semibold leading-5 text-white md:text-[15px] md:leading-6">{article.title_ko || article.title}</div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/48 md:text-xs">
-                <span className="font-medium text-[#8EF3C5]">{article.source}</span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#666] md:text-xs">
+                <span className="font-medium text-[#ff8833]">{article.source}</span>
                 <span>{formatDate(article.published_at)}</span>
                 <span>{formatTime(article.published_at)}</span>
               </div>
@@ -232,21 +232,21 @@ function VideoListCard({
 
           <div className="mt-2.5 flex flex-wrap gap-2">
             {article.tier_label && <Badge className={cn("text-[10px]", tierTone(article.tier))}>{article.tier_label}</Badge>}
-            {article.topic_label && <Badge className="border-white/10 bg-white/[0.02] text-white/55">{article.topic_label}</Badge>}
-            {article.region_label && <Badge className="border-cyan-300/12 bg-cyan-300/8 text-cyan-100">{article.region_label}</Badge>}
+            {article.topic_label && <Badge className="border-[#222] bg-[#161616] text-[#888]">{article.topic_label}</Badge>}
+            {article.region_label && <Badge className="border-[#2a2a2a] bg-[#131313] text-[#9db8d6]">{article.region_label}</Badge>}
           </div>
 
-          {article.insight && <p className="mt-2.5 line-clamp-2 text-[13px] leading-5 text-white/68 md:text-sm md:leading-6">{article.insight}</p>}
+          {article.insight && <p className="mt-2.5 line-clamp-2 text-[13px] leading-5 text-[#8a8a8a] md:text-sm md:leading-6">{article.insight}</p>}
 
           <div className="mt-2.5 flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <Badge key={tag} className="border-white/8 bg-[#1C2640] text-white/52">
+              <Badge key={tag} className="border-[#222] bg-[#171717] text-[#777]">
                 {tag}
               </Badge>
             ))}
           </div>
 
-          <div className="mt-2 flex items-center gap-2 text-[11px] text-white/35">
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-[#555]">
             <span className="inline-flex items-center gap-1">
               선택해서 분석 보기
               <ArrowUpRight size={12} className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -273,7 +273,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
     );
   }
 
-  const bullets = splitBullets(article.summary_ko, article.summary, article.insight, overallInsight);
+  const bullets = splitBullets(article.transcript_excerpt, article.insight, article.summary_ko, article.summary, overallInsight);
   const tags = article.tags || [];
   const sentiment = getSentimentMeta(article.sentiment);
 
@@ -287,12 +287,12 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
         transition={{ duration: 0.2 }}
         className="h-full"
       >
-        <Card className="h-full rounded-[32px] bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(8,12,24,1))]">
+        <Card className="h-full rounded-2xl border border-[#1f1f1f] bg-[#111]">
           <ScrollArea className="h-full max-h-[calc(100vh-190px)] px-6 py-6 lg:max-h-[calc(100vh-170px)]">
             <div className="space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 gap-4">
-                  <div className="h-[126px] w-[176px] shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-[#0E1527]">
+                  <div className="h-[126px] w-[176px] shrink-0 overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
                     <img
                       src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
                       alt={article.title}
@@ -300,8 +300,8 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-white/45">
-                      <span className="font-medium text-[#8EF3C5]">{article.source}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-[#666]">
+                      <span className="font-medium text-[#ff8833]">{article.source}</span>
                       <span>{formatDate(article.published_at)}</span>
                       <span>{formatTime(article.published_at)}</span>
                     </div>
@@ -309,20 +309,25 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Badge className={cn(sentiment.className)}>{sentiment.label}</Badge>
                       {article.tier_label && <Badge className={cn(tierTone(article.tier))}>{article.tier_label}</Badge>}
-                      {article.layer_label && <Badge className="border-white/10 bg-white/[0.03] text-white/65">{article.layer_label}</Badge>}
-                      {article.region_label && <Badge className="border-cyan-300/12 bg-cyan-300/8 text-cyan-100">{article.region_label}</Badge>}
+                      {article.layer_label && <Badge className="border-[#222] bg-[#161616] text-[#888]">{article.layer_label}</Badge>}
+                      {article.region_label && <Badge className="border-[#2a2a2a] bg-[#131313] text-[#9db8d6]">{article.region_label}</Badge>}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <Card className="rounded-[26px] bg-white/[0.03]">
+              <Card className="rounded-xl border border-[#1f1f1f] bg-[#141414]">
                 <CardHeader>
-                  <CardTitle className="text-[#9EF7CC]">INSIGHT</CardTitle>
-                  <CardDescription>영상 인사이트와 전체 시장 흐름을 함께 정리했습니다.</CardDescription>
+                  <CardTitle className="text-[#ffb066]">스크립트 인사이트</CardTitle>
+                  <CardDescription>영상 자막과 전체 시장 흐름을 바탕으로 핵심만 정리했습니다.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
                   <p>{article.insight || overallInsight || "분석 요약을 준비 중입니다."}</p>
+                  {article.transcript_excerpt && (
+                    <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
+                      자막 발췌: {article.transcript_excerpt}
+                    </div>
+                  )}
                   {bullets.length > 0 && (
                     <ul className="space-y-3 text-base leading-8 text-white/74">
                       {bullets.map((bullet) => (
@@ -336,13 +341,13 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[26px] border-amber-300/12 bg-amber-300/[0.04]">
+              <Card className="rounded-xl border border-[#2b241b] bg-[#17120d]">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD27D]">ACTION POINT</CardTitle>
+                  <CardTitle className="text-[#FFD27D]">액션 포인트</CardTitle>
                   <CardDescription>실전 대응에 바로 연결되는 메모입니다.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
-                  <p>{article.summary_ko || article.summary || article.insight || "액션 포인트를 준비 중입니다."}</p>
+                  <p>{article.transcript_excerpt || article.summary_ko || article.summary || article.insight || "액션 포인트를 준비 중입니다."}</p>
                   <div className="rounded-2xl border border-white/8 bg-black/10 p-4 text-sm leading-7 text-white/62">
                     {article.source_role || article.layer_label || "전문가 해설"} 관점에서 나온 내용입니다. 실제 매매 전에는 원문 영상과 주요 수급/실적 데이터를 함께 확인하세요.
                   </div>
@@ -490,18 +495,18 @@ export function VideoNewsFeed() {
   };
 
   return (
-    <div className="h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(47,83,160,0.22),transparent_35%),linear-gradient(180deg,#09101F_0%,#060B14_100%)] text-white">
+    <div className="h-full overflow-hidden bg-[#0a0a0a] text-white">
       <ScrollArea className="h-full px-4 py-4 md:px-6 md:py-5">
         <div className="mx-auto flex max-w-[1680px] flex-col gap-5 pb-6">
-          <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+          <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
             <CardContent className="flex flex-col gap-5 p-5 md:p-6">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-[#9EF7CC]">
+                  <div className="flex items-center gap-2 text-[#ff8833]">
                     <Sparkles size={18} />
                     <span className="text-lg font-semibold">AI 분석 인사이트</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-white/55">영상 뉴스 리스트는 더 작고 빠르게, 선택한 카드의 AI 분석은 오른쪽 큰 패널에서 읽기 좋게 정리했습니다.</p>
+                  <p className="mt-2 text-sm leading-6 text-[#777]">일반 뉴스 카드와 비슷한 톤으로 정리하고, 선택한 영상의 자막 기준 핵심을 아래에서 바로 읽을 수 있게 만들었습니다.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-xs text-white/40">업데이트 {payload ? formatTime(payload.updated_at) : "방금"}</div>
@@ -588,7 +593,7 @@ export function VideoNewsFeed() {
           ) : null}
 
           <div className="space-y-5">
-            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+            <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-2 text-white">
                   <BarChart3 size={16} className="text-[#9EF7CC]" />
@@ -598,7 +603,7 @@ export function VideoNewsFeed() {
               </CardHeader>
             </Card>
 
-            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+            <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -636,7 +641,7 @@ export function VideoNewsFeed() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+            <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-2 text-white">
                   <Tags size={16} className="text-[#B4C2FF]" />

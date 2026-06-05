@@ -21,6 +21,7 @@ _news_cache: TTLCache = TTLCache(maxsize=300, ttl=settings.NEWS_CACHE_TTL)
 _translate_cache: TTLCache = TTLCache(maxsize=1000, ttl=3600)
 _youtube_feed_cache: TTLCache = TTLCache(maxsize=200, ttl=43200)
 _article_image_cache: TTLCache = TTLCache(maxsize=1500, ttl=21600)
+_youtube_transcript_cache: TTLCache = TTLCache(maxsize=1000, ttl=43200)
 
 KOREAN_NEWS_FEEDS = [
     {
@@ -227,6 +228,79 @@ def _extract_media_from_entry(entry: Any) -> dict:
             result["image"] = img_match.group(1)
 
     return result
+
+
+def _compact_text(text: str, max_len: int = 1800) -> str:
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[:max_len].rsplit(" ", 1)[0].strip()
+
+
+def _pick_focus_sentences(*texts: str, limit: int = 2) -> List[str]:
+    merged = " ".join(text for text in texts if text)
+    merged = re.sub(r"\s+", " ", merged).strip()
+    if not merged:
+        return []
+
+    parts = re.split(r"(?<=[.!?다])\s+|\n+|•|·", merged)
+    results: List[str] = []
+    seen = set()
+    for part in parts:
+        sentence = part.strip(" -–—•·\t")
+        if len(sentence) < 18:
+            continue
+        normalized = sentence.lower()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        results.append(sentence[:180])
+        if len(results) >= limit:
+            break
+    return results
+
+
+async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
+    if not video_id:
+        return None
+
+    cache_key = f"yt-transcript:{video_id}"
+    if cache_key in _youtube_transcript_cache:
+        return _youtube_transcript_cache[cache_key]
+
+    def _load_transcript() -> Optional[str]:
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+        except Exception:
+            return None
+
+        try:
+            transcript_items: Any
+            if hasattr(YouTubeTranscriptApi, "get_transcript"):
+                transcript_items = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
+            else:
+                api = YouTubeTranscriptApi()
+                fetched = api.fetch(video_id, languages=["ko", "en"])
+                transcript_items = list(fetched)
+
+            chunks: List[str] = []
+            for item in transcript_items:
+                if isinstance(item, dict):
+                    text = item.get("text", "")
+                else:
+                    text = getattr(item, "text", "")
+                text = _clean_html(text)
+                if text:
+                    chunks.append(text)
+
+            transcript = _compact_text(" ".join(chunks), max_len=2400)
+            return transcript or None
+        except Exception:
+            return None
+
+    transcript = await asyncio.to_thread(_load_transcript)
+    _youtube_transcript_cache[cache_key] = transcript
+    return transcript
 
 
 def _is_probable_article_image(url: str) -> bool:
@@ -643,11 +717,15 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
     return list(dict.fromkeys(tag for tag in tags if tag))[:6]
 
 
-def _build_video_insight(title: str, summary: str, source: str, topic: str, tags: List[str]) -> str:
-    focus = summary.split(". ")[0].strip() if summary else title.strip()
-    focus = focus[:160]
+def _build_video_insight(title: str, summary: str, transcript: Optional[str], source: str, topic: str, tags: List[str]) -> str:
+    focus_sentences = _pick_focus_sentences(transcript or "", summary, title, limit=2)
+    primary = focus_sentences[0] if focus_sentences else (summary[:160].strip() if summary else title.strip())
+    secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
-    return f"핵심 포인트: {focus}. 이 영상은 {TOPIC_LABELS.get(topic, topic)} 흐름을 다루며, 주요 키워드는 {tag_text}입니다."
+
+    if secondary:
+        return f"자막 기준 핵심: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+    return f"자막 기준 핵심: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
 
 
 def _sentiment_to_stance(sentiment: str) -> str:
@@ -794,8 +872,11 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 published_at, published_ts = _parse_published(entry)
                 link = entry.get("link", "")
                 video_id = _extract_youtube_id(link)
-                detected_topic = _detect_topic(f"{title} {summary}", channel.get("topic_hint"))
-                tags = _extract_topic_tags(f"{title} {summary}", detected_topic, channel.get("tags"))
+                transcript = await _fetch_youtube_transcript(video_id)
+                analysis_text = _compact_text(f"{title} {summary} {transcript or ''}", max_len=3000)
+                transcript_excerpt = _pick_focus_sentences(transcript or "", limit=2)
+                detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
+                tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
                 video = {
                     "id": entry.get("yt_videoid", video_id or entry.get("id", link)),
                     "title": title,
@@ -811,9 +892,9 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                     "video_url": link,
                     "video_thumbnail": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
                     "media_type": "video",
-                    "tickers": _extract_tickers(f"{title} {summary}"),
-                    "sentiment": _sentiment_score(f"{title} {summary}"),
-                    "importance": "high" if any(k in (title + summary).lower() for k in ["속보", "긴급", "fed", "금리", "실적", "반도체"]) else "normal",
+                    "tickers": _extract_tickers(analysis_text),
+                    "sentiment": _sentiment_score(analysis_text),
+                    "importance": "high" if any(k in analysis_text.lower() for k in ["속보", "긴급", "fed", "금리", "실적", "반도체"]) else "normal",
                     "data_source": "youtube_rss",
                     "topic": detected_topic,
                     "topic_label": TOPIC_LABELS.get(detected_topic, detected_topic),
@@ -825,7 +906,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                     "region_label": REGION_LABELS.get(channel.get("region", "global"), channel.get("region", "global")),
                     "source_role": channel.get("role", "전문가 해설"),
                     "tags": tags,
-                    "insight": _build_video_insight(title, summary, channel["source"], detected_topic, tags),
+                    "transcript_excerpt": " ".join(transcript_excerpt) if transcript_excerpt else transcript,
+                    "insight": _build_video_insight(title, summary, transcript, channel["source"], detected_topic, tags),
                 }
                 videos.append(video)
         except Exception:

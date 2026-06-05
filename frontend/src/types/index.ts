@@ -93,6 +93,7 @@ export interface NewsArticle {
   region?: "kr" | "us" | "global";
   region_label?: string;
   source_role?: string;
+  transcript_excerpt?: string | null;
 }
 
 export interface VideoFilterOption {

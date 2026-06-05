@@ -16,7 +16,7 @@ export function MarketsPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* 왼쪽 패널 - 데스크톱만 */}
-      <div className="hidden md:flex w-56 flex-shrink-0 flex-col border-r border-terminal-border overflow-hidden">
+      <div className="hidden md:flex w-60 flex-shrink-0 flex-col border-r border-terminal-border overflow-hidden">
         <div className="h-60 flex-shrink-0 border-b border-terminal-border overflow-hidden">
           <WatchList />
         </div>

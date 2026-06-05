@@ -92,7 +92,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="border-b border-terminal-border">
       <div className="px-3 py-1.5 bg-terminal-header">
-        <span className="text-2xs font-mono text-terminal-text-dim uppercase tracking-wider">{title}</span>
+        <span className="block whitespace-normal break-keep pr-1 text-[11px] leading-4 font-mono text-terminal-text-dim">
+          {title}
+        </span>
       </div>
       {children}
     </div>

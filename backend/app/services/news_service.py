@@ -5,6 +5,7 @@
 - 유튜브 뉴스: 주요 금융 채널 RSS를 태그/인사이트와 함께 제공
 """
 import asyncio
+import html
 import time
 import re
 from email.utils import parsedate_to_datetime
@@ -19,22 +20,38 @@ from app.core.config import settings
 _news_cache: TTLCache = TTLCache(maxsize=300, ttl=settings.NEWS_CACHE_TTL)
 _translate_cache: TTLCache = TTLCache(maxsize=1000, ttl=3600)
 _youtube_feed_cache: TTLCache = TTLCache(maxsize=200, ttl=43200)
+_article_image_cache: TTLCache = TTLCache(maxsize=1500, ttl=21600)
 
 KOREAN_NEWS_FEEDS = [
     {
         "source": "연합뉴스 경제",
         "url": "https://www.yna.co.kr/rss/economy.xml",
-        "default_image": "https://www.yna.co.kr/favicon.ico",
+        "source_logo": "https://www.yna.co.kr/favicon.ico",
     },
     {
         "source": "연합뉴스 산업",
         "url": "https://www.yna.co.kr/rss/industry.xml",
-        "default_image": "https://www.yna.co.kr/favicon.ico",
+        "source_logo": "https://www.yna.co.kr/favicon.ico",
     },
     {
         "source": "연합인포맥스",
         "url": "https://news.einfomax.co.kr/rss/allArticle.xml",
-        "default_image": "https://news.einfomax.co.kr/favicon.ico",
+        "source_logo": "https://news.einfomax.co.kr/favicon.ico",
+    },
+    {
+        "source": "한국경제 증권",
+        "url": "https://www.hankyung.com/feed/finance",
+        "source_logo": "https://www.hankyung.com/favicon.ico",
+    },
+    {
+        "source": "매일경제 증권",
+        "url": "https://www.mk.co.kr/rss/30100041/",
+        "source_logo": "https://www.mk.co.kr/favicon.ico",
+    },
+    {
+        "source": "ChosunBiz 증권",
+        "url": "https://biz.chosun.com/arc/outboundfeeds/rss/category/stock/?outputType=xml",
+        "source_logo": "https://biz.chosun.com/favicon.ico",
     },
 ]
 
@@ -212,6 +229,55 @@ def _extract_media_from_entry(entry: Any) -> dict:
     return result
 
 
+def _is_probable_article_image(url: str) -> bool:
+    lowered = (url or "").lower()
+    if not lowered.startswith(("http://", "https://")):
+        return False
+    if any(token in lowered for token in ["favicon", "logo", "icon", "sprite", "badge"]):
+        return False
+    return any(ext in lowered for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]) or any(
+        token in lowered for token in ["image", "thumb", "thumbnail", "photo", "upload"]
+    )
+
+
+async def _resolve_article_image(url: str) -> Optional[str]:
+    if not url:
+        return None
+
+    cache_key = f"article-image:{url}"
+    if cache_key in _article_image_cache:
+        return _article_image_cache[cache_key]
+
+    try:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+            resp = await client.get(url)
+            html = resp.text[:120000]
+    except Exception:
+        _article_image_cache[cache_key] = None
+        return None
+
+    patterns = [
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+        r'<img[^>]+src=["\']([^"\']+)["\']',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, html, flags=re.IGNORECASE)
+        if not match:
+            continue
+        candidate = match.group(1).strip()
+        if candidate.startswith("//"):
+            candidate = f"https:{candidate}"
+        if _is_probable_article_image(candidate):
+            _article_image_cache[cache_key] = candidate
+            return candidate
+
+    _article_image_cache[cache_key] = None
+    return None
+
+
 def _parse_published(entry: Any) -> Tuple[str, int]:
     timestamp = int(time.time())
     if getattr(entry, "published_parsed", None):
@@ -236,6 +302,32 @@ def _dedupe_articles(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         seen.add(key)
         deduped.append(item)
     return deduped
+
+
+def _interleave_articles_by_source(items: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+    buckets: Dict[str, List[Dict[str, Any]]] = {}
+    source_order: List[str] = []
+    for item in sorted(items, key=lambda x: x.get("published_ts", 0), reverse=True):
+        source = item.get("source") or "기타"
+        if source not in buckets:
+            buckets[source] = []
+            source_order.append(source)
+        buckets[source].append(item)
+
+    mixed: List[Dict[str, Any]] = []
+    while len(mixed) < limit:
+        progressed = False
+        for source in source_order:
+            bucket = buckets.get(source, [])
+            if not bucket:
+                continue
+            mixed.append(bucket.pop(0))
+            progressed = True
+            if len(mixed) >= limit:
+                break
+        if not progressed:
+            break
+    return mixed
 
 
 async def _translate_mymemory(text: str) -> Optional[str]:
@@ -292,26 +384,31 @@ async def translate_article(title: str, summary: str = "", user_api_key: Optiona
     return {"title_ko": title_kr, "summary_ko": summary_kr}
 
 
-async def _build_article(entry: Any, source: str, default_image: Optional[str] = None, translate: bool = False) -> Dict[str, Any]:
+async def _build_article(entry: Any, source: str, source_logo: Optional[str] = None, translate: bool = False) -> Dict[str, Any]:
     title = (entry.get("title") or "").strip()
     summary = _clean_html(entry.get("summary") or entry.get("description") or "")[:400]
     published_at, published_ts = _parse_published(entry)
     media = _extract_media_from_entry(entry)
+    article_url = entry.get("link", "")
+    image = media.get("image")
+    if not image and article_url:
+        image = await _resolve_article_image(article_url)
     translation = {"title_ko": None, "summary_ko": None}
     if translate and title:
         translation = await translate_article(title, summary)
 
     return {
-        "id": entry.get("id", entry.get("link", title)),
+        "id": entry.get("id", article_url or title),
         "title": title,
         "title_ko": translation.get("title_ko") or title,
         "summary": summary,
         "summary_ko": translation.get("summary_ko") or summary,
-        "url": entry.get("link", ""),
+        "url": article_url,
         "published_at": published_at,
         "published_ts": published_ts,
         "source": source,
-        "image": media.get("image") or default_image,
+        "image": image,
+        "source_logo": source_logo,
         "video_url": media.get("video_url"),
         "video_thumbnail": media.get("video_thumbnail"),
         "media_type": media.get("media_type", "article"),
@@ -323,7 +420,22 @@ async def _build_article(entry: Any, source: str, default_image: Optional[str] =
 
 
 async def _parse_feed(url: str) -> Any:
-    return await asyncio.to_thread(feedparser.parse, url)
+    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+        resp = await client.get(url)
+        content = resp.text
+
+    content = re.sub(r"&(nbsp|ensp|emsp|thinsp);", " ", content, flags=re.IGNORECASE)
+
+    def _escape_unknown_entity(match: re.Match[str]) -> str:
+        entity = match.group(0)
+        return html.escape(entity)
+
+    content = re.sub(
+        r"&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)([A-Za-z][A-Za-z0-9]+);",
+        _escape_unknown_entity,
+        content,
+    )
+    return await asyncio.to_thread(feedparser.parse, content)
 
 
 async def _resolve_youtube_feed_url(channel: Dict[str, Any]) -> Optional[str]:
@@ -370,7 +482,7 @@ async def get_korean_market_news(limit: int = 30) -> List[Dict[str, Any]]:
         try:
             parsed = await _parse_feed(feed["url"])
             tasks = [
-                _build_article(entry, feed["source"], feed.get("default_image"), translate=False)
+                _build_article(entry, feed["source"], feed.get("source_logo"), translate=False)
                 for entry in parsed.entries[: max(limit, 15)]
             ]
             articles.extend(await asyncio.gather(*tasks))
@@ -378,8 +490,8 @@ async def get_korean_market_news(limit: int = 30) -> List[Dict[str, Any]]:
             continue
 
     articles = _dedupe_articles(articles)
-    articles.sort(key=lambda item: item.get("published_ts", 0), reverse=True)
-    trimmed = [{k: v for k, v in article.items() if k != "published_ts"} for article in articles[:limit]]
+    mixed_articles = _interleave_articles_by_source(articles, limit)
+    trimmed = [{k: v for k, v in article.items() if k != "published_ts"} for article in mixed_articles]
     _news_cache[cache_key] = trimmed
     return trimmed
 

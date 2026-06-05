@@ -1,29 +1,42 @@
-import { ExternalLink, Bell, FileText, Newspaper } from "lucide-react";
+import { ExternalLink, Bell, FileText, Newspaper, Images } from "lucide-react";
+import type { NewsArticle } from "@/types";
 
-const sourceCards = [
+type SourceCard = {
+  title: string;
+  subtitle: string;
+  url: string;
+  description: string;
+  liveSource?: string;
+};
+
+const sourceCards: SourceCard[] = [
   {
     title: "연합뉴스 경제",
     subtitle: "속보",
     url: "https://www.yna.co.kr/economy/index",
     description: "아침 헤드라인과 장 시작 전 전체 분위기 체크용",
+    liveSource: "연합뉴스 경제",
   },
   {
     title: "한국경제 증권",
     subtitle: "국내 증시 뉴스",
     url: "https://www.hankyung.com/finance",
     description: "장중 속보와 종목/수급 기사 확인용",
+    liveSource: "한국경제 증권",
   },
   {
-    title: "이데일리 증권",
+    title: "매일경제 증권",
     subtitle: "개별 종목 뉴스",
-    url: "https://www.edaily.co.kr/articles/stock",
-    description: "단타·스윙 투자자가 빠르게 보는 속보/재료 기사",
+    url: "https://www.mk.co.kr/news/stock/",
+    description: "개별 종목 재료와 업종 기사 같이 보기 좋음",
+    liveSource: "매일경제 증권",
   },
   {
-    title: "다음 증권 뉴스",
+    title: "ChosunBiz 증권",
     subtitle: "종합 뉴스",
-    url: "https://finance.daum.net/news",
-    description: "여러 매체를 한 번에 모아보는 종합 뷰",
+    url: "https://biz.chosun.com/stock/",
+    description: "시장 전체 흐름과 기업 기사 같이 보기 좋음",
+    liveSource: "ChosunBiz 증권",
   },
   {
     title: "DART 전자공시",
@@ -61,14 +74,40 @@ const routines = [
   { time: "저녁", title: "리포트 3개 읽기", description: "한경 컨센서스와 증권사 리포트로 다음날 전략 정리" },
 ];
 
+function SourcePreview({ article, title }: { article?: NewsArticle; title: string }) {
+  if (article?.image) {
+    return (
+      <div className="w-full h-24 rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#1f1f1f]">
+        <img src={article.image} alt={title} className="w-full h-full object-cover" loading="lazy" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-24 rounded-lg border border-dashed border-[#2b2b2b] bg-[#101010] flex items-center justify-center gap-2 text-[#555]">
+      <Images size={14} />
+      <span className="text-2xs font-mono">썸네일 준비중</span>
+    </div>
+  );
+}
+
 export function NewsDeskGuide({
   investorStyle,
   onInvestorStyleChange,
+  previewArticles,
+  selectedSource,
+  onSelectSource,
+  sourceCounts,
 }: {
   investorStyle: keyof typeof investorStyles;
   onInvestorStyleChange: (style: keyof typeof investorStyles) => void;
+  previewArticles: NewsArticle[];
+  selectedSource: string;
+  onSelectSource: (source: string) => void;
+  sourceCounts: Record<string, number>;
 }) {
   const selectedStyle = investorStyles[investorStyle];
+  const previewMap = new Map(previewArticles.map((article) => [article.source, article]));
 
   return (
     <div className="space-y-3 mb-4">
@@ -79,7 +118,7 @@ export function NewsDeskGuide({
           <span className="text-2xs font-mono text-[#555]">뉴스 + 공시 + 리포트 조합</span>
         </div>
         <p className="text-2xs text-[#777] leading-relaxed">
-          수익 내는 투자자는 뉴스만 보지 않고 공시와 리포트를 같이 봅니다. 아래 바로가기와 루틴을 같이 쓰면 장중 판단 속도가 훨씬 빨라집니다.
+          아래 카드에서 바로 기사 소스를 고르면, 그 매체 기사만 아래 목록에 모아서 볼 수 있어요. 공시와 리포트 카드는 원문 사이트로 바로 이동합니다.
         </p>
       </div>
 
@@ -90,24 +129,66 @@ export function NewsDeskGuide({
             <h3 className="text-xs font-semibold text-[#f5f5f5]">추천 정보 소스</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {sourceCards.map((card) => (
-              <a
-                key={card.title}
-                href={card.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-[#1f1f1f] bg-[#111] p-3 hover:border-[#333] hover:bg-[#151515] transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-2xs font-mono text-[#ff6600]">{card.subtitle}</div>
-                    <div className="text-xs text-[#f2f2f2] mt-0.5">{card.title}</div>
+            {sourceCards.map((card) => {
+              const preview = card.liveSource ? previewMap.get(card.liveSource) : undefined;
+              const isSelected = selectedSource !== "all" && selectedSource === card.liveSource;
+              const isFilterCard = Boolean(card.liveSource);
+              const liveCount = card.liveSource ? (sourceCounts[card.liveSource] ?? 0) : null;
+
+              return (
+                <button
+                  key={card.title}
+                  type="button"
+                  onClick={() => {
+                    if (card.liveSource) {
+                      onSelectSource(isSelected ? "all" : card.liveSource);
+                    } else {
+                      window.open(card.url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  className={`text-left rounded-lg border p-3 transition-colors ${
+                    isSelected
+                      ? "border-[#ff6600]/50 bg-[#17120d]"
+                      : "border-[#1f1f1f] bg-[#111] hover:border-[#333] hover:bg-[#151515]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap text-2xs font-mono text-[#ff6600]">
+                        <span>{card.subtitle}</span>
+                        {liveCount !== null && (
+                          <span className="rounded bg-[#1a1a1a] px-1 py-0.5 text-[#cfcfcf]">{liveCount}건</span>
+                        )}
+                        {isSelected && <span className="rounded bg-[#ff6600]/15 px-1 py-0.5 text-[#ffb066]">선택중</span>}
+                      </div>
+                      <div className="text-xs text-[#f2f2f2] mt-0.5">{card.title}</div>
+                    </div>
+                    <a
+                      href={card.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      className="text-[#555] hover:text-[#999] flex-shrink-0"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
                   </div>
-                  <ExternalLink size={12} className="text-[#555] flex-shrink-0" />
-                </div>
-                <p className="mt-2 text-2xs text-[#777] leading-relaxed">{card.description}</p>
-              </a>
-            ))}
+
+                  <div className="mt-2">
+                    <SourcePreview article={preview} title={card.title} />
+                  </div>
+
+                  <p className="mt-2 text-2xs text-[#777] leading-relaxed">{card.description}</p>
+                  {isFilterCard && (
+                    <div className="mt-2 text-2xs font-mono text-[#666]">
+                      {preview
+                        ? `앱 안에서 실시간 기사 ${liveCount ?? 0}건 보기 가능`
+                        : "기사 수집 중"}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 

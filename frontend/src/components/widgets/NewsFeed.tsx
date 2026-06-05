@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ExternalLink, RefreshCw, TrendingUp, TrendingDown, Minus, Play } from "lucide-react";
+import { ExternalLink, RefreshCw, TrendingUp, TrendingDown, Minus, Play, Building2, ImageOff } from "lucide-react";
 import { newsApi } from "@/api/client";
 import type { NewsArticle } from "@/types";
 import { useMarketStore } from "@/store/marketStore";
@@ -41,29 +41,32 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
   const thumbUrl = isVideo ? article.video_thumbnail : article.image;
   const linkUrl = isVideo ? (article.video_url || article.url) : article.url;
 
-  if (!thumbUrl || imgError) return null;
+  if (!thumbUrl || imgError) {
+    return (
+      <div className="w-full aspect-[16/9] bg-[#0d0d0d] border-b border-[#1d1d1d] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-[#555] text-2xs font-mono">
+          <ImageOff size={12} />
+          썸네일 없음
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block relative">
-      <div className="w-full h-40 overflow-hidden bg-[#0a0a0a] relative">
+    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block relative border-b border-[#1d1d1d]">
+      <div className="w-full aspect-[16/9] overflow-hidden bg-[#0a0a0a] relative">
         <img
           src={thumbUrl}
           alt={article.title}
-          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-200"
+          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-200"
           onError={() => setImgError(true)}
           loading="lazy"
         />
         {isVideo && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/15 transition-colors">
             <div className="w-12 h-12 rounded-full bg-[#ff6600]/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
               <Play size={20} className="text-white ml-1" fill="white" />
             </div>
-          </div>
-        )}
-        {isVideo && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#ff6600] rounded text-2xs font-mono text-black font-bold flex items-center gap-1">
-            <Play size={8} fill="black" />
-            VIDEO
           </div>
         )}
       </div>
@@ -73,45 +76,62 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
 
 function NewsCard({ article }: { article: NewsArticle }) {
   const [showEn, setShowEn] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const sentiment = SENTIMENT_CONFIG[article.sentiment];
   const SentimentIcon = sentiment.icon;
   const title = showEn ? article.title : (article.title_ko || article.title);
   const summary = showEn ? article.summary : (article.summary_ko || article.summary);
   const isVideo = article.media_type === "video";
   const mainUrl = isVideo ? (article.video_url || article.url) : article.url;
+  const showLogo = Boolean(article.source_logo && !logoError);
 
   return (
-    <div className="group bg-[#111] hover:bg-[#161616] border border-[#222] hover:border-[#333] rounded-lg overflow-hidden transition-all duration-200 flex flex-col">
+    <div className="group bg-[#111] hover:bg-[#151515] border border-[#222] hover:border-[#333] rounded-xl overflow-hidden transition-all duration-200 flex flex-col h-full">
       <MediaThumbnail article={article} />
 
-      <div className="p-3 space-y-2 flex-1 flex flex-col">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-            <span className="text-2xs font-mono text-[#555] truncate">{article.source}</span>
-            {article.published_at && (
-              <>
-                <span className="text-[#333]">·</span>
-                <span className="text-2xs font-mono text-[#444]">{formatTime(article.published_at)}</span>
-              </>
-            )}
+      <div className="p-3 space-y-3 flex-1 flex flex-col">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap mb-1">
+              {showLogo ? (
+                <img
+                  src={article.source_logo || undefined}
+                  alt={article.source}
+                  className="w-3.5 h-3.5 rounded-sm object-cover border border-[#2a2a2a]"
+                  loading="lazy"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <Building2 size={11} className="text-[#666]" />
+              )}
+              <span className="text-2xs font-mono text-[#777] truncate">{article.source}</span>
+              {article.published_at && (
+                <>
+                  <span className="text-[#333]">·</span>
+                  <span className="text-2xs font-mono text-[#555]">{formatTime(article.published_at)}</span>
+                </>
+              )}
+            </div>
+            <a href={mainUrl} target="_blank" rel="noopener noreferrer" className="block">
+              <h3 className="text-sm font-medium text-[#ededed] leading-snug hover:text-[#ff6600] transition-colors line-clamp-2">
+                {title}
+              </h3>
+            </a>
           </div>
+
           <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-mono flex-shrink-0 border ${sentiment.bg} ${sentiment.border} ${sentiment.text}`}>
             <SentimentIcon size={8} />
             {sentiment.label}
           </div>
         </div>
 
-        <a href={mainUrl} target="_blank" rel="noopener noreferrer" className="block flex-1">
-          <h3 className="text-xs font-medium text-[#e0e0e0] leading-relaxed hover:text-[#ff6600] transition-colors line-clamp-3">
-            {title}
-          </h3>
-        </a>
-
         {summary && (
-          <p className="text-2xs text-[#666] leading-relaxed line-clamp-2">{summary}</p>
+          <p className="text-xs text-[#8a8a8a] leading-relaxed line-clamp-3 min-h-[3.75rem]">
+            {summary}
+          </p>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-1">
+        <div className="mt-auto pt-1 space-y-2">
           <div className="flex items-center gap-1 flex-wrap">
             {article.importance === "high" && (
               <span className="text-2xs font-mono text-[#ff6600] bg-[#ff6600]/10 border border-[#ff6600]/30 px-1 rounded">HOT</span>
@@ -124,28 +144,31 @@ function NewsCard({ article }: { article: NewsArticle }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {isVideo && article.video_url && (
-              <a
-                href={article.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-2xs font-mono text-[#ff6600] hover:text-[#ff8833] transition-colors"
-              >
-                <Play size={9} />
-                영상 보기
-              </a>
-            )}
-            {article.title_ko && article.title_ko !== article.title && (
-              <button
-                onClick={() => setShowEn(!showEn)}
-                className="text-2xs font-mono text-[#555] hover:text-[#888] transition-colors"
-              >
-                {showEn ? "🇰🇷" : "🇺🇸"}
-              </button>
-            )}
-            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-[#444] hover:text-[#ff6600] transition-colors">
-              <ExternalLink size={10} />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isVideo && article.video_url && (
+                <a
+                  href={article.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-2xs font-mono text-[#ff6600] hover:text-[#ff8833] transition-colors"
+                >
+                  <Play size={9} />
+                  영상 보기
+                </a>
+              )}
+              {article.title_ko && article.title_ko !== article.title && (
+                <button
+                  onClick={() => setShowEn(!showEn)}
+                  className="text-2xs font-mono text-[#555] hover:text-[#888] transition-colors"
+                >
+                  {showEn ? "🇰🇷 한글" : "🇺🇸 원문"}
+                </button>
+              )}
+            </div>
+
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-[#444] hover:text-[#ff6600] transition-colors flex-shrink-0">
+              <ExternalLink size={12} />
             </a>
           </div>
         </div>
@@ -181,23 +204,42 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
     return () => clearInterval(id);
   }, [load]);
 
-  const topSources = useMemo(() => {
+  useEffect(() => {
+    setSourceFilter("all");
+  }, [symbolFilter, activeSymbol]);
+
+  const sourceCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const article of articles) {
       counts.set(article.source, (counts.get(article.source) || 0) + 1);
     }
-    return Array.from(counts.entries())
+    return Object.fromEntries(counts.entries());
+  }, [articles]);
+
+  const topSources = useMemo(() => {
+    return Object.entries(sourceCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
+      .slice(0, 8)
       .map(([source]) => source);
+  }, [sourceCounts]);
+
+  const sourcePreviewArticles = useMemo(() => {
+    const bySource = new Map<string, NewsArticle>();
+    for (const article of articles) {
+      if (!bySource.has(article.source)) {
+        bySource.set(article.source, article);
+      }
+    }
+    return Array.from(bySource.values());
   }, [articles]);
 
   const filtered = articles.filter((a) => {
-    if (filter === "positive") return a.sentiment === "positive" && (sourceFilter === "all" || a.source === sourceFilter);
-    if (filter === "negative") return a.sentiment === "negative" && (sourceFilter === "all" || a.source === sourceFilter);
-    if (filter === "hot") return a.importance === "high" && (sourceFilter === "all" || a.source === sourceFilter);
-    if (filter === "video") return a.media_type === "video" && (sourceFilter === "all" || a.source === sourceFilter);
-    return sourceFilter === "all" || a.source === sourceFilter;
+    const sourceMatched = sourceFilter === "all" || a.source === sourceFilter;
+    if (filter === "positive") return a.sentiment === "positive" && sourceMatched;
+    if (filter === "negative") return a.sentiment === "negative" && sourceMatched;
+    if (filter === "hot") return a.importance === "high" && sourceMatched;
+    if (filter === "video") return a.media_type === "video" && sourceMatched;
+    return sourceMatched;
   });
 
   const videoCount = articles.filter((a) => a.media_type === "video").length;
@@ -248,7 +290,14 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
       {(!isLoading || articles.length > 0) && (
         <div className="flex-1 overflow-y-auto p-3">
           {!symbolFilter && (
-            <NewsDeskGuide investorStyle={investorStyle} onInvestorStyleChange={setInvestorStyle} />
+            <NewsDeskGuide
+              investorStyle={investorStyle}
+              onInvestorStyleChange={setInvestorStyle}
+              previewArticles={sourcePreviewArticles}
+              selectedSource={sourceFilter}
+              onSelectSource={setSourceFilter}
+              sourceCounts={sourceCounts}
+            />
           )}
 
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
@@ -262,7 +311,7 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
                   : "border-[#222] text-[#666] hover:text-[#999]"
               }`}
             >
-              전체
+              전체 {articles.length > 0 ? articles.length : ""}
             </button>
             {topSources.map((source) => (
               <button
@@ -275,7 +324,7 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
                     : "border-[#222] text-[#666] hover:text-[#999]"
                 }`}
               >
-                {source}
+                {source} {sourceCounts[source] ?? 0}
               </button>
             ))}
           </div>

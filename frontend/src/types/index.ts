@@ -94,6 +94,7 @@ export interface NewsArticle {
   region_label?: string;
   source_role?: string;
   transcript_excerpt?: string | null;
+  transcript_available?: boolean;
 }
 
 export interface VideoFilterOption {

@@ -20,3 +20,4 @@ redis==5.0.4
 psutil==5.9.8
 deep-translator==1.11.4
 youtube-transcript-api==0.6.2
+yt-dlp>=2025.5.22

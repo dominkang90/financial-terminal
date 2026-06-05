@@ -54,13 +54,41 @@ function tierTone(tier?: string) {
   return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
 }
 
+function cleanReadableText(text?: string | null) {
+  return (text || "")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/www\.\S+/g, " ")
+    .replace(/#([\w가-힣_]+)/g, " ")
+    .replace(/\[(music|applause|laughs?)\]/gi, " ")
+    .replace(/={3,}/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isPromotionalLine(text: string) {
+  const lowered = text.toLowerCase();
+  const promoTokens = ["구독", "좋아요", "알림", "멤버십", "문의", "프리미엄", "이벤트", "구매", "할인", "링크", "바로가기"];
+  if (lowered.includes("http") || lowered.includes("bit.ly") || lowered.includes("abr.ge")) return true;
+  return promoTokens.filter((token) => lowered.includes(token)).length >= 2;
+}
+
 function splitBullets(...inputs: Array<string | undefined | null>) {
-  const joined = inputs.filter(Boolean).join("\n");
+  const joined = inputs.map((item) => cleanReadableText(item)).filter(Boolean).join("\n");
   return joined
     .split(/\n|•|·|(?<=[.!?다])\s+/)
     .map((item) => item.trim())
     .filter((item) => item.length > 14)
+    .filter((item) => !isPromotionalLine(item))
     .slice(0, 4);
+}
+
+function buildActionBullets(article: NewsArticle) {
+  if (!article.transcript_available) {
+    return ["이 영상은 자막을 아직 확보하지 못했습니다.", "영상 열기 버튼으로 원문 내용을 직접 확인해 주세요."];
+  }
+
+  const bullets = splitBullets(article.transcript_excerpt, article.insight);
+  return bullets.length > 0 ? bullets.slice(0, 3) : ["자막은 가져왔지만 아직 핵심 문장을 뽑는 중입니다."];
 }
 
 function summaryCards(videos: NewsArticle[], marketScore: number) {
@@ -273,7 +301,8 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
     );
   }
 
-  const bullets = splitBullets(article.transcript_excerpt, article.insight, article.summary_ko, article.summary, overallInsight);
+  const bullets = splitBullets(article.transcript_excerpt, article.insight, overallInsight);
+  const actionBullets = buildActionBullets(article);
   const tags = article.tags || [];
   const sentiment = getSentimentMeta(article.sentiment);
 
@@ -305,7 +334,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                       <span>{formatDate(article.published_at)}</span>
                       <span>{formatTime(article.published_at)}</span>
                     </div>
-                    <h2 className="mt-3 text-[30px] font-semibold leading-[1.35] text-white">{article.title_ko || article.title}</h2>
+                    <h2 className="mt-3 text-[24px] font-semibold leading-[1.4] text-white md:text-[28px]">{article.title_ko || article.title}</h2>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Badge className={cn(sentiment.className)}>{sentiment.label}</Badge>
                       {article.tier_label && <Badge className={cn(tierTone(article.tier))}>{article.tier_label}</Badge>}
@@ -318,43 +347,55 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
 
               <Card className="rounded-xl border border-[#1f1f1f] bg-[#141414]">
                 <CardHeader>
-                  <CardTitle className="text-[#ffb066]">스크립트 인사이트</CardTitle>
-                  <CardDescription>영상 자막과 전체 시장 흐름을 바탕으로 핵심만 정리했습니다.</CardDescription>
+                  <CardTitle className="text-[#ffb066]">영상 내용 요약</CardTitle>
+                  <CardDescription>설명란이 아니라 자막에서 잡힌 문장만 먼저 보여줍니다.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
+                <CardContent className="space-y-4 text-[16px] leading-7 text-white/82">
                   <p>{article.insight || overallInsight || "분석 요약을 준비 중입니다."}</p>
-                  {article.transcript_excerpt && (
+                  {article.transcript_available ? (
+                    bullets.length > 0 ? (
+                      <ul className="space-y-3 text-[15px] leading-7 text-white/72">
+                        {bullets.map((bullet) => (
+                          <li key={bullet} className="flex gap-3">
+                            <span className="mt-2 text-white/45">▸</span>
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
+                        자막은 가져왔지만 아직 핵심 문장을 정리하는 중입니다.
+                      </div>
+                    )
+                  ) : (
                     <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
-                      자막 발췌: {article.transcript_excerpt}
+                      이 영상은 자막이 없거나 가져오지 못해서, 영상 내용 기반 요약을 숨겼습니다.
                     </div>
-                  )}
-                  {bullets.length > 0 && (
-                    <ul className="space-y-3 text-base leading-8 text-white/74">
-                      {bullets.map((bullet) => (
-                        <li key={bullet} className="flex gap-3">
-                          <span className="mt-2 text-white/45">▸</span>
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl border border-[#2b241b] bg-[#17120d]">
+              <Card className="rounded-xl border border-[#1f1f1f] bg-[#141414]">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD27D]">액션 포인트</CardTitle>
-                  <CardDescription>실전 대응에 바로 연결되는 메모입니다.</CardDescription>
+                  <CardTitle className="text-white">체크 포인트</CardTitle>
+                  <CardDescription>실전에서 먼저 확인할 것만 짧게 정리했습니다.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
-                  <p>{article.transcript_excerpt || article.summary_ko || article.summary || article.insight || "액션 포인트를 준비 중입니다."}</p>
-                  <div className="rounded-2xl border border-white/8 bg-black/10 p-4 text-sm leading-7 text-white/62">
-                    {article.source_role || article.layer_label || "전문가 해설"} 관점에서 나온 내용입니다. 실제 매매 전에는 원문 영상과 주요 수급/실적 데이터를 함께 확인하세요.
+                <CardContent className="space-y-4 text-[15px] leading-7 text-white/80">
+                  <ul className="space-y-3">
+                    {actionBullets.map((bullet) => (
+                      <li key={bullet} className="flex gap-3">
+                        <span className="mt-2 text-[#ffb066]">•</span>
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="rounded-xl border border-[#242424] bg-[#101010] p-4 text-sm leading-6 text-white/55">
+                    {article.source_role || article.layer_label || "전문가 해설"} 관점입니다. 실제 매매 전에는 원문 영상과 주요 수급/실적 데이터를 같이 확인하세요.
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[26px] bg-white/[0.03]">
+              <Card className="rounded-xl border border-[#1f1f1f] bg-[#141414]">
                 <CardHeader>
                   <CardTitle>관련 태그</CardTitle>
                   <CardDescription>주제 태그와 원문 링크를 빠르게 확인할 수 있습니다.</CardDescription>
@@ -363,7 +404,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                   <div className="flex flex-wrap gap-2">
                     {tags.length > 0 ? (
                       tags.map((tag) => (
-                        <Badge key={tag} className="border-white/8 bg-[#1C2640] text-white/65">
+                        <Badge key={tag} className="border-[#222] bg-[#171717] text-[#888]">
                           {tag}
                         </Badge>
                       ))
@@ -377,7 +418,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/78 transition hover:border-white/20 hover:text-white"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#2a2a2a] bg-[#111] px-4 py-2 text-sm text-white/78 transition hover:border-[#3a3a3a] hover:text-white"
                     >
                       <ExternalLink size={14} />
                       원문 보기
@@ -386,7 +427,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                       href={article.video_url || article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-[#8EF3C5]/20 bg-[#8EF3C5]/10 px-4 py-2 text-sm text-[#C5FFE3] transition hover:bg-[#8EF3C5]/14"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#ff6600]/25 bg-[#ff6600]/10 px-4 py-2 text-sm text-[#ffcf9b] transition hover:bg-[#ff6600]/14"
                     >
                       <Play size={14} />
                       영상 열기
@@ -662,14 +703,14 @@ export function VideoNewsFeed() {
       </ScrollArea>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side={detailSide} className={cn(detailSide === "bottom" ? "lg:hidden" : "w-full max-w-[780px]")}>
-          <SheetHeader>
+        <SheetContent side={detailSide} className={cn(detailSide === "bottom" ? "border-t border-[#1f1f1f] bg-[#0b0b0b] p-0 text-white lg:hidden" : "w-full max-w-[760px] border-l border-[#1f1f1f] bg-[#0b0b0b] p-0 text-white")}>
+          <SheetHeader className="border-b border-[#1f1f1f] px-5 py-4 text-left">
             <SheetTitle>{selected ? selected.title_ko || selected.title : "영상 인사이트"}</SheetTitle>
             <SheetDescription>
               {detailSide === "bottom" ? "모바일에서는 하단 시트로 상세 분석을 보여줍니다." : "카드를 클릭했을 때만 상세 분석 팝업이 열립니다."}
             </SheetDescription>
           </SheetHeader>
-          <div className="px-4 pb-4 pt-2">
+          <div className="px-4 pb-4 pt-3">
             <DetailPanel article={selected} overallInsight={payload?.overall_insight} />
           </div>
         </SheetContent>

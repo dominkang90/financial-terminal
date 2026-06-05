@@ -237,27 +237,84 @@ def _compact_text(text: str, max_len: int = 1800) -> str:
     return cleaned[:max_len].rsplit(" ", 1)[0].strip()
 
 
+def _strip_youtube_noise(text: str) -> str:
+    cleaned = _clean_html(text or "")
+    cleaned = re.sub(r"https?://\S+|www\.\S+|\S+@\S+", " ", cleaned)
+    cleaned = re.sub(r"[#][\w가-힣_]+", " ", cleaned)
+    cleaned = re.sub(r"[=]{3,}", " ", cleaned)
+    cleaned = re.sub(r"\[(?:music|applause|laughs?)\]", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def _is_promotional_sentence(text: str) -> bool:
+    lowered = (text or "").lower()
+    promo_tokens = [
+        "구독", "좋아요", "알림", "멤버십", "문의", "프리미엄", "이벤트", "구매", "할인", "링크", "바로가기",
+        "subscribe", "membership", "discount", "shop", "shopping",
+    ]
+    if "http" in lowered or "bit.ly" in lowered or "abr.ge" in lowered:
+        return True
+    if sum(token in lowered for token in promo_tokens) >= 2:
+        return True
+    return False
+
+
+def _focus_sentence_score(sentence: str) -> int:
+    lowered = sentence.lower()
+    score = 0
+    important_tokens = [
+        "고용", "실업", "임금", "물가", "cpi", "ppi", "금리", "연준", "fed", "파월", "국채", "달러",
+        "실적", "매출", "영업이익", "가이던스", "반도체", "ai", "엔비디아", "삼성전자", "sk하이닉스",
+        "코스피", "코스닥", "나스닥", "s&p", "환율", "수급", "외국인", "기관", "관세", "정책",
+    ]
+    weak_tokens = ["안녕하세요", "브레이킹 뉴스", "오늘은", "여러분", "좋아요", "구독"]
+    for token in important_tokens:
+        if token in lowered:
+            score += 3
+    for token in weak_tokens:
+        if token in lowered:
+            score -= 4
+    if any(ch.isdigit() for ch in sentence):
+        score += 2
+    if 35 <= len(sentence) <= 170:
+        score += 1
+    return score
+
+
 def _pick_focus_sentences(*texts: str, limit: int = 2) -> List[str]:
-    merged = " ".join(text for text in texts if text)
+    merged = " ".join(_strip_youtube_noise(text) for text in texts if text)
     merged = re.sub(r"\s+", " ", merged).strip()
     if not merged:
         return []
 
     parts = re.split(r"(?<=[.!?다])\s+|\n+|•|·", merged)
-    results: List[str] = []
+    candidates: List[Tuple[int, int, str]] = []
     seen = set()
-    for part in parts:
+    for index, part in enumerate(parts):
         sentence = part.strip(" -–—•·\t")
         if len(sentence) < 18:
+            continue
+        if _is_promotional_sentence(sentence):
             continue
         normalized = sentence.lower()
         if normalized in seen:
             continue
         seen.add(normalized)
-        results.append(sentence[:180])
-        if len(results) >= limit:
-            break
-    return results
+        candidates.append((_focus_sentence_score(sentence), -index, sentence[:180]))
+
+    candidates.sort(reverse=True)
+    return [sentence for _, _, sentence in candidates[:limit]]
+
+
+def _parse_json3_transcript(payload: Dict[str, Any]) -> str:
+    chunks: List[str] = []
+    for event in payload.get("events", []):
+        for seg in event.get("segs", []) or []:
+            text = _strip_youtube_noise(seg.get("utf8", ""))
+            if text:
+                chunks.append(text)
+    return _compact_text(" ".join(chunks), max_len=2400)
 
 
 async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
@@ -272,31 +329,67 @@ async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
         except Exception:
-            return None
+            YouTubeTranscriptApi = None  # type: ignore[assignment]
+
+        if YouTubeTranscriptApi is not None:
+            try:
+                transcript_items: Any
+                if hasattr(YouTubeTranscriptApi, "get_transcript"):
+                    transcript_items = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
+                else:
+                    api = YouTubeTranscriptApi()
+                    fetched = api.fetch(video_id, languages=["ko", "en"])
+                    transcript_items = list(fetched)
+
+                chunks: List[str] = []
+                for item in transcript_items:
+                    if isinstance(item, dict):
+                        text = item.get("text", "")
+                    else:
+                        text = getattr(item, "text", "")
+                    text = _strip_youtube_noise(text)
+                    if text and not _is_promotional_sentence(text):
+                        chunks.append(text)
+
+                transcript = _compact_text(" ".join(chunks), max_len=2400)
+                if transcript:
+                    return transcript
+            except Exception:
+                pass
 
         try:
-            transcript_items: Any
-            if hasattr(YouTubeTranscriptApi, "get_transcript"):
-                transcript_items = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
-            else:
-                api = YouTubeTranscriptApi()
-                fetched = api.fetch(video_id, languages=["ko", "en"])
-                transcript_items = list(fetched)
+            from yt_dlp import YoutubeDL
 
-            chunks: List[str] = []
-            for item in transcript_items:
-                if isinstance(item, dict):
-                    text = item.get("text", "")
-                else:
-                    text = getattr(item, "text", "")
-                text = _clean_html(text)
-                if text:
-                    chunks.append(text)
+            ydl_opts: Any = {"quiet": True, "skip_download": True, "no_warnings": True}
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
 
-            transcript = _compact_text(" ".join(chunks), max_len=2400)
-            return transcript or None
+            caption_pools = [info.get("subtitles") or {}, info.get("automatic_captions") or {}]
+            preferred_langs = ["ko", "ko-orig", "en", "en-orig"]
+            preferred_exts = ["json3", "srv3", "srv1", "vtt", "ttml"]
+
+            for pool in caption_pools:
+                for lang in preferred_langs:
+                    tracks = pool.get(lang) or []
+                    tracks = sorted(tracks, key=lambda item: preferred_exts.index(item.get("ext")) if item.get("ext") in preferred_exts else 999)
+                    for track in tracks:
+                        url = track.get("url")
+                        ext = track.get("ext")
+                        if not url:
+                            continue
+                        with httpx.Client(timeout=8.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                            resp = client.get(url)
+                            resp.raise_for_status()
+                            if ext == "json3":
+                                transcript = _parse_json3_transcript(resp.json())
+                            else:
+                                transcript = _compact_text(_strip_youtube_noise(resp.text), max_len=2400)
+                        if transcript:
+                            return transcript
         except Exception:
             return None
+
+        return None
 
     transcript = await asyncio.to_thread(_load_transcript)
     _youtube_transcript_cache[cache_key] = transcript
@@ -719,20 +812,18 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
 
 def _build_video_insight(title: str, summary: str, transcript: Optional[str], source: str, topic: str, tags: List[str]) -> str:
     has_transcript = bool((transcript or "").strip())
-    focus_sentences = _pick_focus_sentences(transcript or "", summary, title, limit=2)
-
-    fallback_focus = title.strip()
-    if summary and not summary.lstrip().startswith("#"):
-        fallback_focus = summary[:160].strip()
-
-    primary = focus_sentences[0] if focus_sentences else fallback_focus
-    secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
-    prefix = "자막 기준 핵심" if has_transcript else "영상 설명 기준 핵심"
+
+    if not has_transcript:
+        return f"이 영상은 자막을 가져오지 못해 영상 내용 기반 인사이트를 아직 만들지 못했습니다. 제목 기준으로는 {tag_text} 흐름을 볼 가능성이 큽니다. 영상 열기로 직접 확인해 주세요."
+
+    focus_sentences = _pick_focus_sentences(transcript or "", limit=2)
+    primary = focus_sentences[0] if focus_sentences else title.strip()
+    secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
 
     if secondary:
-        return f"{prefix}: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
-    return f"{prefix}: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+        return f"자막 기준 핵심: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+    return f"자막 기준 핵심: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
 
 
 def _sentiment_to_stance(sentiment: str) -> str:
@@ -880,8 +971,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 link = entry.get("link", "")
                 video_id = _extract_youtube_id(link)
                 transcript = await _fetch_youtube_transcript(video_id)
-                analysis_text = _compact_text(f"{title} {summary} {transcript or ''}", max_len=3000)
-                transcript_excerpt = _pick_focus_sentences(transcript or "", limit=2)
+                analysis_text = _compact_text(f"{title} {transcript or ''}", max_len=3000)
+                transcript_excerpt = _pick_focus_sentences(transcript or "", limit=3)
                 detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
                 tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
                 video = {
@@ -913,6 +1004,7 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                     "region_label": REGION_LABELS.get(channel.get("region", "global"), channel.get("region", "global")),
                     "source_role": channel.get("role", "전문가 해설"),
                     "tags": tags,
+                    "transcript_available": bool(transcript_excerpt or transcript),
                     "transcript_excerpt": " ".join(transcript_excerpt) if transcript_excerpt else transcript,
                     "insight": _build_video_insight(title, summary, transcript, channel["source"], detected_topic, tags),
                 }

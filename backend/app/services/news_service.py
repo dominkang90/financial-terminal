@@ -396,6 +396,53 @@ async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
     return transcript
 
 
+async def _fetch_gemini_youtube_summary(video_url: str, title: str) -> Optional[str]:
+    if not settings.GEMINI_API_KEY or not video_url:
+        return None
+
+    cache_key = f"yt-gemini-summary:{video_url}"
+    if cache_key in _youtube_transcript_cache:
+        return _youtube_transcript_cache[cache_key]
+
+    prompt = (
+        "다음 유튜브 영상의 실제 말하는 내용만 바탕으로 한국어 투자 요약을 만들어줘. "
+        "영상 설명란, 광고 링크, 상품 홍보, 댓글, 채널 소개는 절대 쓰지 마. "
+        "핵심 숫자, 시장 영향, 투자자가 확인할 포인트를 3문장으로 짧게 정리해.\n"
+        f"영상 제목: {title}"
+    )
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {"fileData": {"mimeType": "video/mp4", "fileUri": video_url}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 420},
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+        parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        text = " ".join(part.get("text", "") for part in parts if part.get("text"))
+        summary = _compact_text(_strip_youtube_noise(text), max_len=900)
+        if summary:
+            _youtube_transcript_cache[cache_key] = summary
+            return summary
+    except Exception:
+        return None
+
+    return None
+
+
 def _is_probable_article_image(url: str) -> bool:
     lowered = (url or "").lower()
     if not lowered.startswith(("http://", "https://")):
@@ -810,20 +857,21 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
     return list(dict.fromkeys(tag for tag in tags if tag))[:6]
 
 
-def _build_video_insight(title: str, summary: str, transcript: Optional[str], source: str, topic: str, tags: List[str]) -> str:
-    has_transcript = bool((transcript or "").strip())
+def _build_video_insight(title: str, summary: str, content_text: Optional[str], source: str, topic: str, tags: List[str], content_basis: str = "none") -> str:
+    has_content = bool((content_text or "").strip())
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
 
-    if not has_transcript:
-        return f"이 영상은 자막을 가져오지 못해 영상 내용 기반 인사이트를 아직 만들지 못했습니다. 제목 기준으로는 {tag_text} 흐름을 볼 가능성이 큽니다. 영상 열기로 직접 확인해 주세요."
+    if not has_content:
+        return f"이 영상은 자막이나 영상 요약을 가져오지 못해 영상 내용 기반 인사이트를 아직 만들지 못했습니다. 제목 기준으로는 {tag_text} 흐름을 볼 가능성이 큽니다. 영상 열기로 직접 확인해 주세요."
 
-    focus_sentences = _pick_focus_sentences(transcript or "", limit=2)
+    focus_sentences = _pick_focus_sentences(content_text or "", limit=2)
     primary = focus_sentences[0] if focus_sentences else title.strip()
     secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
+    prefix = "자막 기준 핵심" if content_basis == "transcript" else "영상 내용 기준 핵심"
 
     if secondary:
-        return f"자막 기준 핵심: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
-    return f"자막 기준 핵심: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+        return f"{prefix}: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+    return f"{prefix}: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
 
 
 def _sentiment_to_stance(sentiment: str) -> str:
@@ -971,8 +1019,13 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 link = entry.get("link", "")
                 video_id = _extract_youtube_id(link)
                 transcript = await _fetch_youtube_transcript(video_id)
-                analysis_text = _compact_text(f"{title} {transcript or ''}", max_len=3000)
-                transcript_excerpt = _pick_focus_sentences(transcript or "", limit=3)
+                content_basis = "transcript" if transcript else "none"
+                content_text = transcript
+                if not content_text:
+                    content_text = await _fetch_gemini_youtube_summary(link, title)
+                    content_basis = "video_ai" if content_text else "none"
+                content_excerpt = _pick_focus_sentences(content_text or "", limit=3)
+                analysis_text = _compact_text(f"{title} {content_text or ''}", max_len=3000)
                 detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
                 tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
                 video = {
@@ -1004,9 +1057,10 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                     "region_label": REGION_LABELS.get(channel.get("region", "global"), channel.get("region", "global")),
                     "source_role": channel.get("role", "전문가 해설"),
                     "tags": tags,
-                    "transcript_available": bool(transcript_excerpt or transcript),
-                    "transcript_excerpt": " ".join(transcript_excerpt) if transcript_excerpt else transcript,
-                    "insight": _build_video_insight(title, summary, transcript, channel["source"], detected_topic, tags),
+                    "transcript_available": bool(content_excerpt or content_text),
+                    "content_basis": content_basis,
+                    "transcript_excerpt": " ".join(content_excerpt) if content_excerpt else content_text,
+                    "insight": _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
                 }
                 videos.append(video)
         except Exception:

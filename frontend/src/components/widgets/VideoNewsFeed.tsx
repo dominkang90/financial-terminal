@@ -84,11 +84,11 @@ function splitBullets(...inputs: Array<string | undefined | null>) {
 
 function buildActionBullets(article: NewsArticle) {
   if (!article.transcript_available) {
-    return ["이 영상은 자막을 아직 확보하지 못했습니다.", "영상 열기 버튼으로 원문 내용을 직접 확인해 주세요."];
+    return ["이 영상은 아직 내용을 확보하지 못했습니다.", "영상 열기 버튼으로 원문 내용을 직접 확인해 주세요."];
   }
 
   const bullets = splitBullets(article.transcript_excerpt, article.insight);
-  return bullets.length > 0 ? bullets.slice(0, 3) : ["자막은 가져왔지만 아직 핵심 문장을 뽑는 중입니다."];
+  return bullets.length > 0 ? bullets.slice(0, 3) : ["영상 내용은 가져왔지만 아직 핵심 문장을 뽑는 중입니다."];
 }
 
 function summaryCards(videos: NewsArticle[], marketScore: number) {
@@ -348,7 +348,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
               <Card className="rounded-xl border border-[#1f1f1f] bg-[#141414]">
                 <CardHeader>
                   <CardTitle className="text-[#ffb066]">영상 내용 요약</CardTitle>
-                  <CardDescription>설명란이 아니라 자막에서 잡힌 문장만 먼저 보여줍니다.</CardDescription>
+                  <CardDescription>더보기/설명란이 아니라 영상 안에서 확보한 내용만 먼저 보여줍니다.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-[16px] leading-7 text-white/82">
                   <p>{article.insight || overallInsight || "분석 요약을 준비 중입니다."}</p>
@@ -364,12 +364,12 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                       </ul>
                     ) : (
                       <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
-                        자막은 가져왔지만 아직 핵심 문장을 정리하는 중입니다.
+                        영상 내용은 가져왔지만 아직 핵심 문장을 정리하는 중입니다.
                       </div>
                     )
                   ) : (
                     <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
-                      이 영상은 자막이 없거나 가져오지 못해서, 영상 내용 기반 요약을 숨겼습니다.
+                      이 영상은 자막이나 영상 요약을 가져오지 못해서, 영상 내용 기반 요약을 숨겼습니다.
                     </div>
                   )}
                 </CardContent>
@@ -547,7 +547,7 @@ export function VideoNewsFeed() {
                     <Sparkles size={18} />
                     <span className="text-lg font-semibold">AI 분석 인사이트</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-[#777]">일반 뉴스 카드와 비슷한 톤으로 정리하고, 선택한 영상의 자막 기준 핵심을 아래에서 바로 읽을 수 있게 만들었습니다.</p>
+                  <p className="mt-2 text-sm leading-6 text-[#777]">일반 뉴스 카드와 비슷한 톤으로 정리하고, 선택한 영상의 실제 내용 기준 핵심을 아래에서 바로 읽을 수 있게 만들었습니다.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-xs text-white/40">업데이트 {payload ? formatTime(payload.updated_at) : "방금"}</div>

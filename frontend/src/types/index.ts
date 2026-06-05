@@ -95,6 +95,7 @@ export interface NewsArticle {
   source_role?: string;
   transcript_excerpt?: string | null;
   transcript_available?: boolean;
+  content_basis?: "transcript" | "video_ai" | "none";
 }
 
 export interface VideoFilterOption {

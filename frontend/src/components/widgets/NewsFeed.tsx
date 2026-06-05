@@ -200,9 +200,9 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0">
         <span className="text-xs font-mono text-[#888]">
-          {symbolFilter ? `${activeSymbol} 뉴스` : "시장 뉴스"}
+          {symbolFilter ? `${activeSymbol} 뉴스` : "한국 주요 증시 뉴스"}
         </span>
-        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 한국어 자동번역</span>
+        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 카드형 썸네일 UI</span>
         <div className="flex-1" />
         {/* 필터 */}
         <div className="flex items-center gap-0.5 overflow-x-auto">

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Quote, ChartData, ChartPeriod, ChartInterval, NewsArticle, OptionsChain } from "@/types";
+import type { Quote, ChartData, ChartPeriod, ChartInterval, NewsArticle, OptionsChain, VideoNewsResponse } from "@/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -59,6 +59,9 @@ export const marketApi = {
 export const newsApi = {
   list: (symbol?: string, limit = 30): Promise<NewsArticle[]> =>
     api.get("/news", { params: { symbol, limit } }).then((r) => r.data),
+
+  videos: (topic = "all", limit = 24): Promise<VideoNewsResponse> =>
+    api.get("/news/videos", { params: { topic, limit } }).then((r) => r.data),
 
   translate: (text: string, apiKey?: string): Promise<{ translation: string | null }> =>
     api.post("/news/translate", { text, api_key: apiKey }).then((r) => r.data),

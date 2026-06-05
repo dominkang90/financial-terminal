@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Depends
 from typing import Optional
-from app.services.news_service import get_news, translate_with_gemini
+from app.services.news_service import get_news, get_youtube_market_videos, translate_with_gemini
 from app.core.security import get_current_user_id
 
 router = APIRouter(prefix="/news", tags=["news"])
@@ -12,6 +12,14 @@ async def news(
     limit: int = Query(30, le=100),
 ):
     return await get_news(symbol, limit)
+
+
+@router.get("/videos")
+async def news_videos(
+    topic: str = Query("all"),
+    limit: int = Query(24, le=60),
+):
+    return await get_youtube_market_videos(limit=limit, topic=topic)
 
 
 @router.post("/translate")

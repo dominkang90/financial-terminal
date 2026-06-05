@@ -4,6 +4,7 @@
 모든 소스 실패 시 "데이터 없음"으로 명확히 표시 (가짜 데이터 없음).
 """
 import asyncio
+import re
 import time
 from typing import Optional, Dict, Any, List
 from cachetools import TTLCache
@@ -14,6 +15,8 @@ from app.core.config import settings
 _quote_cache: TTLCache = TTLCache(maxsize=500, ttl=settings.QUOTE_CACHE_TTL)
 _chart_cache: TTLCache = TTLCache(maxsize=100, ttl=settings.CHART_CACHE_TTL)
 _index_cache: TTLCache = TTLCache(maxsize=50, ttl=settings.INDEX_CACHE_TTL)
+_fx_cache: TTLCache = TTLCache(maxsize=32, ttl=300)
+_krx_info_cache: TTLCache = TTLCache(maxsize=128, ttl=1800)
 
 INDEX_TICKERS = {
     "SPX": "^GSPC",
@@ -60,6 +63,23 @@ YAHOO_HEADERS = {
     "Origin": "https://finance.yahoo.com",
 }
 
+NAVER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://finance.naver.com/",
+}
+
+KRW_FX_CROSS = {
+    "USD": ("KRW=X", "direct"),
+    "EUR": ("EURUSD=X", "multiply_usdkrw"),
+    "GBP": ("GBPUSD=X", "multiply_usdkrw"),
+    "JPY": ("JPY=X", "divide_usdkrw"),
+    "CNY": ("CNY=X", "divide_usdkrw"),
+}
+
 
 def _data_status(last_updated: float) -> str:
     age = time.time() - last_updated
@@ -78,6 +98,174 @@ def _safe_float(v: Any, default: float = 0.0) -> float:
         return f if f == f else default  # NaN check
     except (TypeError, ValueError):
         return default
+
+
+def _normalize_symbol_candidates(symbol: str) -> List[str]:
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return []
+    if re.fullmatch(r"\d{6}", sym):
+        return [f"{sym}.KS", f"{sym}.KQ"]
+    return [sym]
+
+
+def _is_krx_symbol(symbol: str) -> bool:
+    return bool(re.fullmatch(r"\d{6}\.(KS|KQ)", (symbol or "").upper()))
+
+
+def _extract_krx_code(symbol: str) -> Optional[str]:
+    match = re.fullmatch(r"(\d{6})\.(KS|KQ)", (symbol or "").upper())
+    return match.group(1) if match else None
+
+
+def _strip_tags(value: str) -> str:
+    return re.sub(r"<[^>]+>", "", value or "").replace("&nbsp;", " ").strip()
+
+
+def _first_number(value: str) -> Optional[float]:
+    if not value:
+        return None
+    match = re.search(r"-?\d[\d,]*(?:\.\d+)?", value)
+    if not match:
+        return None
+    try:
+        return float(match.group(0).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _extract_table_value(html: str, label_pattern: str) -> Optional[str]:
+    pattern = rf"{label_pattern}.*?</th>\s*<td[^>]*>(.*?)</td>"
+    match = re.search(pattern, html, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None
+    return _strip_tags(match.group(1))
+
+
+async def _fetch_simple_yahoo_price(symbol: str) -> Optional[float]:
+    quote = await _fetch_yahoo_quote_http(symbol)
+    price = _safe_float((quote or {}).get("price"), 0.0)
+    return price if price > 0 else None
+
+
+async def _get_krw_fx_rate(currency: Optional[str]) -> Optional[float]:
+    curr = (currency or "").upper()
+    if not curr:
+        return None
+    if curr == "KRW":
+        return 1.0
+    if curr in _fx_cache:
+        return _fx_cache[curr]
+
+    cross = KRW_FX_CROSS.get(curr)
+    if not cross:
+        return None
+
+    base_symbol, mode = cross
+    base_price = await _fetch_simple_yahoo_price(base_symbol)
+    if not base_price:
+        return None
+
+    if mode == "direct":
+        rate = base_price
+    else:
+        usd_krw = await _fetch_simple_yahoo_price("KRW=X")
+        if not usd_krw:
+            return None
+        if mode == "multiply_usdkrw":
+            rate = base_price * usd_krw
+        else:
+            rate = usd_krw / base_price if base_price else None
+
+    if rate and rate > 0:
+        _fx_cache[curr] = rate
+        return rate
+    return None
+
+
+async def _fetch_krx_company_info(symbol: str) -> Dict[str, Any]:
+    code = _extract_krx_code(symbol)
+    if not code:
+        return {}
+    if code in _krx_info_cache:
+        return _krx_info_cache[code]
+
+    url = f"https://finance.naver.com/item/main.naver?code={code}"
+    try:
+        async with httpx.AsyncClient(headers=NAVER_HEADERS, timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                return {}
+            html = resp.text
+
+        market_cap_eok = _first_number(_extract_table_value(html, r"시가총액\(억\)") or "")
+        foreign_ownership = _first_number(_extract_table_value(html, r"외국인소진율\(B/A\)") or "")
+        shares_outstanding = _first_number(_extract_table_value(html, r"상장주식수") or "")
+        per_value = _first_number(_extract_table_value(html, r"PER(?:<span[^>]*>.*?</span>)?\(배\)") or "")
+        eps_value = _first_number(_extract_table_value(html, r"EPS(?:<span[^>]*>.*?</span>)?\(원\)") or "")
+        pbr_value = _first_number(_extract_table_value(html, r"PBR(?:<span[^>]*>.*?</span>)?\(배\)") or "")
+        bps_value = _first_number(_extract_table_value(html, r"BPS(?:<span[^>]*>.*?</span>)?\(원\)") or "")
+
+        dividend_match = re.search(r"배당수익률.*?<td[^>]*>\s*<em>([\d.,]+)</em>", html, re.IGNORECASE | re.DOTALL)
+        high_low_match = re.search(r"52주최고.*?<td[^>]*>\s*<em>([\d,]+)</em>\s*<span[^>]*>.*?</span>\s*<em>([\d,]+)</em>", html, re.IGNORECASE | re.DOTALL)
+        industry_match = re.search(r"업종명\s*:\s*<a[^>]*>([^<]+)</a>", html, re.IGNORECASE)
+
+        dividend_rate = _first_number(dividend_match.group(1)) if dividend_match else None
+
+        result = {
+            "market_cap": int(market_cap_eok * 100_000_000) if market_cap_eok else None,
+            "foreign_ownership": foreign_ownership,
+            "shares_outstanding": int(shares_outstanding) if shares_outstanding else None,
+            "pe_ratio": per_value,
+            "eps": eps_value,
+            "pbr": pbr_value,
+            "bps": bps_value,
+            "dividend_yield": (dividend_rate / 100) if dividend_rate is not None else None,
+            "52w_high": _first_number(high_low_match.group(1)) if high_low_match else None,
+            "52w_low": _first_number(high_low_match.group(2)) if high_low_match else None,
+            "industry": _strip_tags(industry_match.group(1)) if industry_match else None,
+        }
+        _krx_info_cache[code] = result
+        return result
+    except Exception:
+        return {}
+
+
+async def _decorate_quote(symbol: str, quote: Dict[str, Any]) -> Dict[str, Any]:
+    enriched = dict(quote)
+    if _is_krx_symbol(symbol):
+        krx_info = await _fetch_krx_company_info(symbol)
+        for key, value in krx_info.items():
+            if value is None:
+                continue
+            if enriched.get(key) in (None, "", 0, 0.0):
+                enriched[key] = value
+        enriched["currency"] = "KRW"
+        enriched["exchange"] = enriched.get("exchange") or ("KOSDAQ" if symbol.endswith(".KQ") else "KOSPI")
+
+    fx_rate = await _get_krw_fx_rate(enriched.get("currency"))
+    if fx_rate and fx_rate > 0:
+        enriched["fx_rate_to_krw"] = round(fx_rate, 4)
+        for src, dst in [
+            ("price", "price_krw"),
+            ("change", "change_krw"),
+            ("prev_close", "prev_close_krw"),
+            ("open", "open_krw"),
+            ("high", "high_krw"),
+            ("low", "low_krw"),
+            ("market_cap", "market_cap_krw"),
+            ("eps", "eps_krw"),
+            ("52w_high", "52w_high_krw"),
+            ("52w_low", "52w_low_krw"),
+        ]:
+            value = enriched.get(src)
+            if value not in (None, ""):
+                try:
+                    enriched[dst] = round(float(value) * fx_rate, 4)
+                except (TypeError, ValueError):
+                    continue
+
+    return enriched
 
 
 async def _fetch_yahoo_quote_http(symbol: str) -> Optional[Dict]:
@@ -226,34 +414,41 @@ async def _fetch_finnhub_quote(symbol: str) -> Optional[Dict]:
 
 
 async def get_quote(symbol: str) -> Dict[str, Any]:
-    sym = symbol.upper()
-    cache_key = f"quote:{sym}"
-    if cache_key in _quote_cache:
-        cached = _quote_cache[cache_key]
-        return {**cached, "data_status": _data_status(cached["_fetched_at"])}
+    candidates = _normalize_symbol_candidates(symbol)
+    if not candidates:
+        return {
+            "symbol": (symbol or "").upper(),
+            "data_status": "error",
+            "error": "심볼이 비어 있습니다.",
+        }
 
-    # 소스 순서: Finnhub → Yahoo HTTP
-    result = None
-    for fetch_fn in [
-        lambda: _fetch_finnhub_quote(sym),
-        lambda: _fetch_yahoo_quote_http(sym),
-    ]:
-        try:
-            result = await fetch_fn()
-            if result:
-                break
-        except Exception:
-            continue
+    for sym in candidates:
+        cache_key = f"quote:{sym}"
+        if cache_key in _quote_cache:
+            cached = _quote_cache[cache_key]
+            return {**cached, "data_status": _data_status(cached["_fetched_at"])}
 
-    if result:
-        _quote_cache[cache_key] = result
-        return {**result, "data_status": "delayed"}
+        result = None
+        for fetch_fn in [
+            lambda: _fetch_finnhub_quote(sym),
+            lambda: _fetch_yahoo_quote_http(sym),
+        ]:
+            try:
+                result = await fetch_fn()
+                if result:
+                    break
+            except Exception:
+                continue
 
-    # 모든 소스 실패
+        if result:
+            decorated = await _decorate_quote(sym, result)
+            _quote_cache[cache_key] = decorated
+            return {**decorated, "data_status": "delayed"}
+
     return {
-        "symbol": sym,
+        "symbol": candidates[0],
         "data_status": "error",
-        "error": "데이터를 불러올 수 없습니다. Finnhub API 키를 설정하거나 잠시 후 다시 시도해주세요.",
+        "error": "데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.",
     }
 
 
@@ -309,56 +504,60 @@ async def get_chart_data(
     period = valid_periods.get(period, "6mo")
     interval = valid_intervals.get(interval, "1d")
 
-    cache_key = f"chart:{symbol}:{period}:{interval}"
-    if cache_key in _chart_cache:
-        return _chart_cache[cache_key]
+    candidates = _normalize_symbol_candidates(symbol)
+    if not candidates:
+        candidates = [(symbol or "").upper()]
 
-    candles = await _fetch_yahoo_chart_http(symbol, period, interval)
+    for candidate in candidates:
+        cache_key = f"chart:{candidate}:{period}:{interval}"
+        if cache_key in _chart_cache:
+            return _chart_cache[cache_key]
 
-    if candles is None:
-        # yfinance 폴백 시도
-        try:
-            import yfinance as yf
-            import asyncio as _asyncio
-            ticker = yf.Ticker(symbol)
-            hist = await _asyncio.to_thread(lambda: ticker.history(period=period, interval=interval))
-            if not hist.empty:
-                candles = []
-                for idx, row in hist.iterrows():
-                    c = float(row["Close"])
-                    if c > 0:
-                        candles.append({
-                            "time": int(idx.timestamp()),
-                            "open": round(float(row["Open"]), 4),
-                            "high": round(float(row["High"]), 4),
-                            "low": round(float(row["Low"]), 4),
-                            "close": round(c, 4),
-                            "volume": int(row["Volume"]),
-                        })
-        except Exception:
-            pass
+        candles = await _fetch_yahoo_chart_http(candidate, period, interval)
 
-    if not candles:
-        return {
-            "symbol": symbol.upper(),
-            "period": period,
-            "interval": interval,
-            "data_status": "no_data",
-            "candles": [],
-            "error": "차트 데이터를 가져올 수 없습니다. Finnhub API 키를 설정하세요.",
-        }
+        if candles is None:
+            try:
+                import yfinance as yf
+                import asyncio as _asyncio
+                ticker = yf.Ticker(candidate)
+                hist = await _asyncio.to_thread(lambda: ticker.history(period=period, interval=interval))
+                if not hist.empty:
+                    candles = []
+                    for idx, row in hist.iterrows():
+                        c = float(row["Close"])
+                        if c > 0:
+                            candles.append({
+                                "time": int(idx.timestamp()),
+                                "open": round(float(row["Open"]), 4),
+                                "high": round(float(row["High"]), 4),
+                                "low": round(float(row["Low"]), 4),
+                                "close": round(c, 4),
+                                "volume": int(row["Volume"]),
+                            })
+            except Exception:
+                pass
 
-    result = {
-        "symbol": symbol.upper(),
+        if candles:
+            result = {
+                "symbol": candidate.upper(),
+                "period": period,
+                "interval": interval,
+                "candles": sorted(candles, key=lambda x: x["time"]),
+                "data_source": "yahoo_finance",
+                "data_status": "delayed",
+                "note": "지연 데이터 (Yahoo Finance)",
+            }
+            _chart_cache[cache_key] = result
+            return result
+
+    return {
+        "symbol": candidates[0].upper(),
         "period": period,
         "interval": interval,
-        "candles": sorted(candles, key=lambda x: x["time"]),
-        "data_source": "yahoo_finance",
-        "data_status": "delayed",
-        "note": "지연 데이터 (Yahoo Finance)",
+        "data_status": "no_data",
+        "candles": [],
+        "error": "차트 데이터를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.",
     }
-    _chart_cache[cache_key] = result
-    return result
 
 
 async def search_symbols(query: str, limit: int = 20) -> List[Dict]:

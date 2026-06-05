@@ -13,15 +13,30 @@ export interface Quote {
   volume: number;
   avg_volume: number;
   market_cap?: number;
+  market_cap_krw?: number;
   pe_ratio?: number;
+  pbr?: number;
   eps?: number;
+  eps_krw?: number;
+  bps?: number;
   dividend_yield?: number;
   "52w_high"?: number;
   "52w_low"?: number;
+  "52w_high_krw"?: number;
+  "52w_low_krw"?: number;
   sector?: string;
   industry?: string;
+  shares_outstanding?: number;
+  foreign_ownership?: number;
   currency: string;
   exchange: string;
+  fx_rate_to_krw?: number;
+  price_krw?: number;
+  change_krw?: number;
+  prev_close_krw?: number;
+  open_krw?: number;
+  high_krw?: number;
+  low_krw?: number;
   data_status: DataStatus;
   data_source?: string;
   note?: string;
@@ -65,6 +80,18 @@ export interface NewsArticle {
   video_thumbnail?: string | null;
   media_type?: "article" | "video";
   translation?: string | null;
+  tags?: string[];
+  topic?: string;
+  topic_label?: string;
+  insight?: string;
+  channel?: string;
+}
+
+export interface VideoNewsResponse {
+  videos: NewsArticle[];
+  topics: { id: string; label: string }[];
+  overall_insight: string;
+  updated_at: string;
 }
 
 export interface Position {

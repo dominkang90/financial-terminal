@@ -718,14 +718,21 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
 
 
 def _build_video_insight(title: str, summary: str, transcript: Optional[str], source: str, topic: str, tags: List[str]) -> str:
+    has_transcript = bool((transcript or "").strip())
     focus_sentences = _pick_focus_sentences(transcript or "", summary, title, limit=2)
-    primary = focus_sentences[0] if focus_sentences else (summary[:160].strip() if summary else title.strip())
+
+    fallback_focus = title.strip()
+    if summary and not summary.lstrip().startswith("#"):
+        fallback_focus = summary[:160].strip()
+
+    primary = focus_sentences[0] if focus_sentences else fallback_focus
     secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
+    prefix = "자막 기준 핵심" if has_transcript else "영상 설명 기준 핵심"
 
     if secondary:
-        return f"자막 기준 핵심: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
-    return f"자막 기준 핵심: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+        return f"{prefix}: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+    return f"{prefix}: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
 
 
 def _sentiment_to_stance(sentiment: str) -> str:

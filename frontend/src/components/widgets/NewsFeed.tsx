@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { ExternalLink, RefreshCw, TrendingUp, TrendingDown, Minus, Play } from "lucide-react";
 import { newsApi } from "@/api/client";
 import type { NewsArticle } from "@/types";
 import { useMarketStore } from "@/store/marketStore";
+import { NewsDeskGuide } from "@/components/widgets/NewsDeskGuide";
 
 const SENTIMENT_CONFIG = {
   positive: {
@@ -34,7 +35,6 @@ function formatTime(dateStr: string): string {
   } catch { return ""; }
 }
 
-// 미디어 썸네일 (이미지 or 영상)
 function MediaThumbnail({ article }: { article: NewsArticle }) {
   const [imgError, setImgError] = useState(false);
   const isVideo = article.media_type === "video";
@@ -53,7 +53,6 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
           onError={() => setImgError(true)}
           loading="lazy"
         />
-        {/* 영상일 때 재생 버튼 오버레이 */}
         {isVideo && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
             <div className="w-12 h-12 rounded-full bg-[#ff6600]/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -61,7 +60,6 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
             </div>
           </div>
         )}
-        {/* 영상 배지 */}
         {isVideo && (
           <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#ff6600] rounded text-2xs font-mono text-black font-bold flex items-center gap-1">
             <Play size={8} fill="black" />
@@ -84,13 +82,11 @@ function NewsCard({ article }: { article: NewsArticle }) {
 
   return (
     <div className="group bg-[#111] hover:bg-[#161616] border border-[#222] hover:border-[#333] rounded-lg overflow-hidden transition-all duration-200 flex flex-col">
-      {/* 썸네일 (이미지 or 영상) */}
       <MediaThumbnail article={article} />
 
       <div className="p-3 space-y-2 flex-1 flex flex-col">
-        {/* 상단: 출처 + 시간 + 감성 */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
             <span className="text-2xs font-mono text-[#555] truncate">{article.source}</span>
             {article.published_at && (
               <>
@@ -105,19 +101,16 @@ function NewsCard({ article }: { article: NewsArticle }) {
           </div>
         </div>
 
-        {/* 제목 */}
         <a href={mainUrl} target="_blank" rel="noopener noreferrer" className="block flex-1">
           <h3 className="text-xs font-medium text-[#e0e0e0] leading-relaxed hover:text-[#ff6600] transition-colors line-clamp-3">
             {title}
           </h3>
         </a>
 
-        {/* 요약 */}
         {summary && (
           <p className="text-2xs text-[#666] leading-relaxed line-clamp-2">{summary}</p>
         )}
 
-        {/* 하단 */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="flex items-center gap-1 flex-wrap">
             {article.importance === "high" && (
@@ -126,10 +119,12 @@ function NewsCard({ article }: { article: NewsArticle }) {
             {article.tickers.slice(0, 3).map((t) => (
               <span key={t} className="text-2xs font-mono text-[#3399ff] bg-[#3399ff]/10 px-1 rounded">{t}</span>
             ))}
+            {article.topic_label && (
+              <span className="text-2xs font-mono text-[#7bd389] bg-[#7bd389]/10 px-1 rounded">{article.topic_label}</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* 영상 바로가기 */}
             {isVideo && article.video_url && (
               <a
                 href={article.video_url}
@@ -141,8 +136,7 @@ function NewsCard({ article }: { article: NewsArticle }) {
                 영상 보기
               </a>
             )}
-            {/* 한/영 토글 */}
-            {article.title_ko && (
+            {article.title_ko && article.title_ko !== article.title && (
               <button
                 onClick={() => setShowEn(!showEn)}
                 className="text-2xs font-mono text-[#555] hover:text-[#888] transition-colors"
@@ -165,6 +159,8 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "positive" | "negative" | "hot" | "video">("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [investorStyle, setInvestorStyle] = useState<"beginner" | "shortterm" | "longterm">("shortterm");
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -185,26 +181,35 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
     return () => clearInterval(id);
   }, [load]);
 
+  const topSources = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const article of articles) {
+      counts.set(article.source, (counts.get(article.source) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([source]) => source);
+  }, [articles]);
+
   const filtered = articles.filter((a) => {
-    if (filter === "positive") return a.sentiment === "positive";
-    if (filter === "negative") return a.sentiment === "negative";
-    if (filter === "hot") return a.importance === "high";
-    if (filter === "video") return a.media_type === "video";
-    return true;
+    if (filter === "positive") return a.sentiment === "positive" && (sourceFilter === "all" || a.source === sourceFilter);
+    if (filter === "negative") return a.sentiment === "negative" && (sourceFilter === "all" || a.source === sourceFilter);
+    if (filter === "hot") return a.importance === "high" && (sourceFilter === "all" || a.source === sourceFilter);
+    if (filter === "video") return a.media_type === "video" && (sourceFilter === "all" || a.source === sourceFilter);
+    return sourceFilter === "all" || a.source === sourceFilter;
   });
 
   const videoCount = articles.filter((a) => a.media_type === "video").length;
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0 flex-wrap">
         <span className="text-xs font-mono text-[#888]">
           {symbolFilter ? `${activeSymbol} 뉴스` : "한국 주요 증시 뉴스"}
         </span>
-        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 카드형 썸네일 UI</span>
+        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 뉴스 + 공시 + 리포트 참고 데스크</span>
         <div className="flex-1" />
-        {/* 필터 */}
         <div className="flex items-center gap-0.5 overflow-x-auto">
           {([
             { key: "all", label: "전체" },
@@ -230,7 +235,6 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
         <span className="text-2xs text-[#333] font-mono">{filtered.length}</span>
       </div>
 
-      {/* 로딩 */}
       {isLoading && articles.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
@@ -241,9 +245,41 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
         </div>
       )}
 
-      {/* 카드 그리드 - 모바일: 1열 / 태블릿: 2열 / 데스크톱: 3열 */}
       {(!isLoading || articles.length > 0) && (
         <div className="flex-1 overflow-y-auto p-3">
+          {!symbolFilter && (
+            <NewsDeskGuide investorStyle={investorStyle} onInvestorStyleChange={setInvestorStyle} />
+          )}
+
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            <span className="text-2xs font-mono text-[#555] mr-1">매체 필터</span>
+            <button
+              type="button"
+              onClick={() => setSourceFilter("all")}
+              className={`px-2 py-1 rounded text-2xs font-mono border ${
+                sourceFilter === "all"
+                  ? "bg-[#1d1d1d] text-[#f2f2f2] border-[#444]"
+                  : "border-[#222] text-[#666] hover:text-[#999]"
+              }`}
+            >
+              전체
+            </button>
+            {topSources.map((source) => (
+              <button
+                key={source}
+                type="button"
+                onClick={() => setSourceFilter(source)}
+                className={`px-2 py-1 rounded text-2xs font-mono border ${
+                  sourceFilter === source
+                    ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
+                    : "border-[#222] text-[#666] hover:text-[#999]"
+                }`}
+              >
+                {source}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map((article) => (
               <NewsCard key={article.id} article={article} />
@@ -251,7 +287,7 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
           </div>
           {filtered.length === 0 && !isLoading && (
             <div className="flex items-center justify-center h-32">
-              <p className="text-xs text-[#444] font-mono">뉴스가 없습니다</p>
+              <p className="text-xs text-[#444] font-mono">조건에 맞는 뉴스가 없습니다</p>
             </div>
           )}
         </div>

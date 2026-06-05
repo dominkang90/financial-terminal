@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Plus, X, Star } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
-import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
-
-function formatWatchPrice(price?: number, currency = "USD") {
-  if (price === null || price === undefined) return "—";
-  const symbol = currency === "KRW" ? "₩" : currency === "JPY" ? "¥" : "$";
-  const decimals = currency === "KRW" || currency === "JPY" ? 0 : 2;
-  return `${symbol}${formatNumber(price, decimals)}`;
-}
+import { useSettingsStore } from "@/store/settingsStore";
+import { ChangeValue } from "@/components/common/DataStatus";
+import {
+  canToggleCurrency,
+  formatMoney,
+  formatValueByMode,
+  getEffectiveDisplayMode,
+} from "@/lib/currencyDisplay";
 
 export function WatchList() {
   const {
@@ -16,6 +16,7 @@ export function WatchList() {
     setActiveSymbol, addToWatchlist, removeFromWatchlist,
     fetchWatchlistQuotes,
   } = useMarketStore();
+  const { defaultQuoteDisplay, symbolCurrencyOverrides } = useSettingsStore();
   const [addInput, setAddInput] = useState("");
 
   useEffect(() => {
@@ -40,6 +41,10 @@ export function WatchList() {
         <span className="text-2xs text-terminal-text-dim ml-auto">{watchlist.length}개</span>
       </div>
 
+      <div className="px-3 py-1 border-b border-terminal-border text-[10px] font-mono text-terminal-text-dim">
+        기본 표시: {defaultQuoteDisplay === "KRW" ? "원화 우선" : "달러/현지통화 우선"}
+      </div>
+
       <form onSubmit={handleAdd} className="flex gap-1 px-2 py-1.5 border-b border-terminal-border flex-shrink-0">
         <input
           value={addInput}
@@ -62,7 +67,10 @@ export function WatchList() {
         {watchlist.map((symbol) => {
           const q = quotes[symbol];
           const isActive = symbol === activeSymbol;
-          const showKrw = q && q.currency !== "KRW" && !!q.price_krw;
+          const symbolOverride = symbolCurrencyOverrides[symbol] || (q ? symbolCurrencyOverrides[q.symbol] : undefined);
+          const displayMode = getEffectiveDisplayMode(q, defaultQuoteDisplay, symbolOverride);
+          const priceDisplay = q ? formatValueByMode(q.price, q.currency, q.price_krw, displayMode) : null;
+          const canToggle = canToggleCurrency(q);
 
           return (
             <div
@@ -81,16 +89,21 @@ export function WatchList() {
               </div>
 
               <div className="text-right leading-tight">
-                {q?.data_status === "error" || !q ? (
+                {q?.data_status === "error" || !q || !priceDisplay ? (
                   <span className="text-2xs text-terminal-text-dim font-mono">—</span>
                 ) : (
                   <>
                     <div className="text-xs font-mono text-terminal-text-primary">
-                      {showKrw ? formatWatchPrice(q.price_krw, "KRW") : formatWatchPrice(q.price, q.currency)}
+                      {priceDisplay.primary}
                     </div>
-                    {showKrw && (
+                    {canToggle && priceDisplay.secondary && (
                       <div className="text-[10px] font-mono text-terminal-text-dim">
-                        {formatWatchPrice(q.price, q.currency)}
+                        {priceDisplay.secondary}
+                      </div>
+                    )}
+                    {!canToggle && q.currency === "KRW" && (
+                      <div className="text-[10px] font-mono text-terminal-text-dim">
+                        {formatMoney(q.price, q.currency)}
                       </div>
                     )}
                   </>

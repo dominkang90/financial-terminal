@@ -15,6 +15,7 @@ export function SettingsModal({ onClose }: Props) {
   const [alpacaSecret, setAlpacaSecret] = useState(settings.alpacaSecretKey);
   const [enableReal, setEnableReal] = useState(settings.enableRealTrading);
   const [refreshInterval, setRefreshInterval] = useState(settings.autoRefreshInterval);
+  const [defaultQuoteDisplay, setDefaultQuoteDisplay] = useState(settings.defaultQuoteDisplay);
   const [showKeys, setShowKeys] = useState(false);
   const [tab, setTab] = useState<"api" | "trading" | "display">("api");
 
@@ -24,6 +25,7 @@ export function SettingsModal({ onClose }: Props) {
     settings.setAlpacaKeys(alpacaKey, alpacaSecret);
     settings.setEnableRealTrading(enableReal);
     settings.setAutoRefreshInterval(refreshInterval);
+    settings.setDefaultQuoteDisplay(defaultQuoteDisplay);
     toast.success("설정이 저장되었습니다");
     onClose();
   };
@@ -145,6 +147,37 @@ export function SettingsModal({ onClose }: Props) {
                   <option value={60}>1분</option>
                   <option value={300}>5분</option>
                 </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-2xs text-terminal-text-dim font-mono uppercase">기본 가격 표시 통화</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDefaultQuoteDisplay("KRW")}
+                    className={`rounded border px-3 py-2 text-xs font-mono text-left ${
+                      defaultQuoteDisplay === "KRW"
+                        ? "border-terminal-accent bg-terminal-accent/10 text-terminal-accent"
+                        : "border-terminal-border text-terminal-text-secondary hover:text-terminal-text-primary"
+                    }`}
+                  >
+                    원화 우선
+                    <div className="mt-1 text-2xs text-terminal-text-dim">해외주식도 KRW 환산값을 기본으로 표시</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDefaultQuoteDisplay("NATIVE")}
+                    className={`rounded border px-3 py-2 text-xs font-mono text-left ${
+                      defaultQuoteDisplay === "NATIVE"
+                        ? "border-terminal-accent bg-terminal-accent/10 text-terminal-accent"
+                        : "border-terminal-border text-terminal-text-secondary hover:text-terminal-text-primary"
+                    }`}
+                  >
+                    달러/현지통화 우선
+                    <div className="mt-1 text-2xs text-terminal-text-dim">원래 통화를 기본으로 보고 필요할 때만 KRW로 전환</div>
+                  </button>
+                </div>
+                <p className="text-2xs text-terminal-text-dim">종목 상세 패널에서는 종목별로 원화/달러(현지통화) 버튼을 따로 바꿀 수 있습니다.</p>
               </div>
             </div>
           )}

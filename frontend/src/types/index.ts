@@ -85,11 +85,51 @@ export interface NewsArticle {
   topic_label?: string;
   insight?: string;
   channel?: string;
+  tier?: "s" | "a" | "b";
+  tier_label?: string;
+  layer?: "fact" | "analysis" | "future" | "sentiment";
+  layer_label?: string;
+  region?: "kr" | "us" | "global";
+  region_label?: string;
+  source_role?: string;
+}
+
+export interface VideoFilterOption {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface VideoDeskGuideLayer {
+  id: string;
+  label: string;
+  description: string;
+  tier: string;
+  sources: string[];
+}
+
+export interface VideoDeskGuide {
+  layers: VideoDeskGuideLayer[];
+  excluded: string[];
+}
+
+export interface ChannelConsensusItem {
+  source: string;
+  stance: string;
+  count: number;
+  tier?: string;
+  tier_label?: string;
+  layer_label?: string;
 }
 
 export interface VideoNewsResponse {
   videos: NewsArticle[];
   topics: { id: string; label: string }[];
+  tier_filters: VideoFilterOption[];
+  source_filters: VideoFilterOption[];
+  desk_guide: VideoDeskGuide;
+  channel_consensus: ChannelConsensusItem[];
+  market_score: number;
   overall_insight: string;
   updated_at: string;
 }

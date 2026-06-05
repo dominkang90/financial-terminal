@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { RefreshCw, Play, ExternalLink, X, Tags } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, ArrowUpRight, BarChart3, ExternalLink, Play, RefreshCw, ShieldCheck, Sparkles, Tags } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
 import { newsApi } from "@/api/client";
-import type { NewsArticle, VideoNewsResponse } from "@/types";
+import type { ChannelConsensusItem, NewsArticle, VideoDeskGuideLayer, VideoNewsResponse } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 function formatTime(dateStr: string): string {
   try {
@@ -19,171 +26,403 @@ function formatTime(dateStr: string): string {
   }
 }
 
-function VideoInsightModal({ article, open, onOpenChange }: { article: NewsArticle | null; open: boolean; onOpenChange: (open: boolean) => void }) {
-  if (!article) return null;
+function formatDate(dateStr: string): string {
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+    }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+}
 
+function getSentimentMeta(sentiment?: string) {
+  if (sentiment === "positive") {
+    return { label: "BULLISH", className: "border-emerald-400/18 bg-emerald-400/14 text-emerald-200" };
+  }
+  if (sentiment === "negative") {
+    return { label: "BEARISH", className: "border-rose-400/18 bg-rose-400/14 text-rose-200" };
+  }
+  return { label: "NEUTRAL", className: "border-amber-300/18 bg-amber-300/14 text-amber-100" };
+}
+
+function tierTone(tier?: string) {
+  if (tier === "s") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
+  if (tier === "a") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
+  return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
+}
+
+function splitBullets(...inputs: Array<string | undefined | null>) {
+  const joined = inputs.filter(Boolean).join("\n");
+  return joined
+    .split(/\n|•|·|(?<=[.!?다])\s+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 14)
+    .slice(0, 4);
+}
+
+function summaryCards(videos: NewsArticle[], marketScore: number) {
+  const bullish = videos.filter((item) => item.sentiment === "positive").length;
+  const bearish = videos.filter((item) => item.sentiment === "negative").length;
+  const neutral = videos.length - bullish - bearish;
+
+  return [
+    {
+      title: "시장 온도",
+      value: `${marketScore}점`,
+      hint: "영상 톤과 중요도를 함께 반영한 체감 점수",
+      accent: "text-[#FFD27D]",
+    },
+    {
+      title: "상승 시각",
+      value: `${bullish}건`,
+      hint: "긍정적으로 해석한 채널 수",
+      accent: "text-[#9EF7CC]",
+    },
+    {
+      title: "하락 경계",
+      value: `${bearish}건`,
+      hint: "리스크를 강조한 채널 수",
+      accent: "text-[#FF9DA5]",
+    },
+    {
+      title: "중립/관망",
+      value: `${neutral}건`,
+      hint: "팩트 확인 또는 방향성 대기",
+      accent: "text-[#B4C2FF]",
+    },
+  ];
+}
+
+function FilterButton({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count?: number;
+  onClick: () => void;
+}) {
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#2a2a2a] bg-[#101010] shadow-2xl outline-none max-h-[88vh] overflow-y-auto">
-          <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-[#222] bg-[#101010]">
-            <Dialog.Title className="text-sm font-semibold text-[#f2f2f2]">영상 인사이트</Dialog.Title>
-            <Dialog.Close className="text-[#777] hover:text-white">
-              <X size={16} />
-            </Dialog.Close>
-          </div>
-
-          <div className="p-4 space-y-4">
-            {article.video_thumbnail && (
-              <a href={article.video_url || article.url} target="_blank" rel="noopener noreferrer" className="block relative rounded-lg overflow-hidden border border-[#222]">
-                <img src={article.video_thumbnail} alt={article.title} className="w-full h-64 object-cover" />
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-full bg-[#ff6600]/90 flex items-center justify-center shadow-lg">
-                    <Play size={22} className="text-white ml-1" fill="white" />
-                  </div>
-                </div>
-              </a>
-            )}
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2 text-2xs font-mono text-[#777]">
-                <span>{article.source}</span>
-                <span>·</span>
-                <span>{formatTime(article.published_at)}</span>
-                {article.topic_label && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#ff6600]/10 border border-[#ff6600]/20 text-[#ff8833]">
-                    {article.topic_label}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-[#f4f4f4] leading-snug">{article.title_ko || article.title}</h3>
-              {article.summary && (
-                <p className="text-sm text-[#c8c8c8] leading-relaxed whitespace-pre-wrap">{article.summary_ko || article.summary}</p>
-              )}
-            </div>
-
-            <div className="rounded-lg border border-[#232323] bg-[#151515] p-4 space-y-2">
-              <div className="text-xs font-semibold text-[#ff8833]">종합 정리</div>
-              <p className="text-sm text-[#e8e8e8] leading-relaxed">{article.insight || "분석 요약을 준비 중입니다."}</p>
-            </div>
-
-            {article.tags && article.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag) => (
-                  <span key={tag} className="px-2 py-1 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-2xs font-mono text-[#8ec5ff]">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <a
-                href={article.video_url || article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md bg-[#ff6600] px-3 py-2 text-xs font-semibold text-black hover:bg-[#ff7a1a]"
-              >
-                <Play size={13} />
-                유튜브에서 보기
-              </a>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md border border-[#2d2d2d] px-3 py-2 text-xs text-[#ddd] hover:border-[#444] hover:text-white"
-              >
-                <ExternalLink size={13} />
-                링크 열기
-              </a>
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+        active
+          ? "border-[#8EF3C5]/40 bg-[#8EF3C5]/14 text-[#C5FFE3]"
+          : "border-white/10 bg-white/[0.02] text-white/55 hover:border-white/20 hover:text-white/80",
+      )}
+    >
+      <span>{label}</span>
+      {typeof count === "number" && <span className="text-[10px] opacity-75">{count}</span>}
+    </button>
   );
 }
 
-function VideoCard({ article, onOpenInsight }: { article: NewsArticle; onOpenInsight: (article: NewsArticle) => void }) {
+function MetricCard({ title, value, hint, accent }: { title: string; value: string; hint: string; accent: string }) {
   return (
-    <div className="group rounded-xl overflow-hidden border border-[#202020] bg-[#111] hover:border-[#323232] transition-colors flex flex-col">
-      <button onClick={() => onOpenInsight(article)} className="relative text-left">
-        <img
-          src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
-          alt={article.title}
-          className="w-full h-44 object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-        <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-2xs font-mono text-white">
-          <Play size={8} fill="white" />
-          VIDEO
+    <Card className="rounded-[24px] bg-white/[0.035]">
+      <CardHeader className="pb-3">
+        <CardDescription>{title}</CardDescription>
+        <CardTitle className={cn("text-2xl", accent)}>{value}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs leading-relaxed text-white/50">{hint}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GuideLayerCard({ layer }: { layer: VideoDeskGuideLayer }) {
+  return (
+    <Card className="rounded-[24px] bg-white/[0.03]">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>{layer.label}</CardTitle>
+          <Badge className={cn("px-2 py-1 text-[10px]", tierTone(layer.tier))}>{layer.tier.toUpperCase()}</Badge>
         </div>
-      </button>
+        <CardDescription>{layer.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {layer.sources.map((source) => (
+          <Badge key={source} className="border-white/10 bg-white/[0.03] text-white/60">
+            {source}
+          </Badge>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
-      <div className="p-3 flex-1 flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2 text-2xs font-mono text-[#777]">
-          <span className="truncate">{article.source}</span>
-          <span>{formatTime(article.published_at)}</span>
+function ConsensusRow({ item }: { item: ChannelConsensusItem }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-white">{item.source}</div>
+        <div className="truncate text-[11px] text-white/45">{item.tier_label || item.layer_label || "시장 해석"}</div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className="text-xs font-semibold text-[#C5FFE3]">{item.stance}</div>
+        <div className="text-[11px] text-white/45">{item.count}건</div>
+      </div>
+    </div>
+  );
+}
+
+function VideoListCard({
+  article,
+  active,
+  onSelect,
+}: {
+  article: NewsArticle;
+  active: boolean;
+  onSelect: (article: NewsArticle) => void;
+}) {
+  const sentiment = getSentimentMeta(article.sentiment);
+  const tags = (article.tags || []).slice(0, 5);
+
+  return (
+    <motion.button
+      layout
+      whileHover={{ y: -2 }}
+      onClick={() => onSelect(article)}
+      className={cn(
+        "group relative w-full rounded-[26px] border p-3 text-left transition duration-200",
+        active
+          ? "border-[#8EF3C5]/45 bg-[linear-gradient(180deg,rgba(18,30,55,0.95),rgba(11,18,35,0.98))] shadow-[0_0_0_1px_rgba(142,243,197,0.08),0_18px_35px_rgba(0,0,0,0.22)]"
+          : "border-white/8 bg-white/[0.03] hover:border-white/16 hover:bg-white/[0.045]",
+      )}
+    >
+      {active && (
+        <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded-full border border-[#8EF3C5]/30 bg-[#8EF3C5]/12 p-2 text-[#C5FFE3] lg:flex">
+          <ArrowRight size={14} />
+        </div>
+      )}
+      <div className="flex gap-4">
+        <div className="relative h-[78px] w-[112px] shrink-0 overflow-hidden rounded-[18px] border border-white/8 bg-[#0E1527] md:h-[84px] md:w-[118px]">
+          <img
+            src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
+            alt={article.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#0B1325]/70 via-transparent to-transparent" />
+          <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] text-white/90 backdrop-blur">
+            <Play size={10} fill="currentColor" />
+            영상
+          </div>
         </div>
 
-        <button onClick={() => onOpenInsight(article)} className="text-left">
-          <h3 className="text-sm font-medium text-[#ececec] leading-snug line-clamp-2 hover:text-[#ff8833] transition-colors">
-            {article.title_ko || article.title}
-          </h3>
-        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="line-clamp-2 text-[14px] font-semibold leading-5 text-white md:text-[15px] md:leading-6">{article.title_ko || article.title}</div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/48 md:text-xs">
+                <span className="font-medium text-[#8EF3C5]">{article.source}</span>
+                <span>{formatDate(article.published_at)}</span>
+                <span>{formatTime(article.published_at)}</span>
+              </div>
+            </div>
+            <Badge className={cn("shrink-0", sentiment.className)}>{sentiment.label}</Badge>
+          </div>
 
-        {article.insight && (
-          <p className="text-2xs text-[#999] leading-relaxed line-clamp-3">{article.insight}</p>
-        )}
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {article.tier_label && <Badge className={cn("text-[10px]", tierTone(article.tier))}>{article.tier_label}</Badge>}
+            {article.topic_label && <Badge className="border-white/10 bg-white/[0.02] text-white/55">{article.topic_label}</Badge>}
+            {article.region_label && <Badge className="border-cyan-300/12 bg-cyan-300/8 text-cyan-100">{article.region_label}</Badge>}
+          </div>
 
-        <div className="mt-auto space-y-2">
-          <div className="flex flex-wrap gap-1.5">
-            {(article.tags || []).slice(0, 4).map((tag) => (
-              <span key={tag} className="px-1.5 py-0.5 rounded bg-[#1a1a1a] text-2xs font-mono text-[#7cb8ff] border border-[#262626]">
-                #{tag}
-              </span>
+          {article.insight && <p className="mt-2.5 line-clamp-2 text-[13px] leading-5 text-white/68 md:text-sm md:leading-6">{article.insight}</p>}
+
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <Badge key={tag} className="border-white/8 bg-[#1C2640] text-white/52">
+                {tag}
+              </Badge>
             ))}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => onOpenInsight(article)}
-              className="inline-flex items-center gap-1 rounded-md border border-[#2b2b2b] px-2 py-1 text-2xs font-mono text-[#ddd] hover:border-[#444] hover:text-white"
-            >
-              <Tags size={10} />
-              인사이트
-            </button>
-            <a
-              href={article.video_url || article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-2xs font-mono text-[#ff8833] hover:text-[#ffb36b]"
-            >
-              <Play size={10} />
-              영상 열기
-            </a>
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-white/35">
+            <span className="inline-flex items-center gap-1">
+              선택해서 분석 보기
+              <ArrowUpRight size={12} className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
           </div>
         </div>
       </div>
-    </div>
+    </motion.button>
+  );
+}
+
+function DetailPanel({ article, overallInsight }: { article: NewsArticle | null; overallInsight?: string }) {
+  if (!article) {
+    return (
+      <Card className="flex h-full min-h-[420px] items-center justify-center rounded-[32px] border-dashed border-white/10 bg-white/[0.02]">
+        <div className="max-w-sm text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
+            <Sparkles size={18} className="text-[#8EF3C5]" />
+          </div>
+          <div className="text-base font-semibold text-white">뉴스 카드를 선택하세요</div>
+          <p className="mt-2 text-sm leading-6 text-white/55">왼쪽 리스트에서 영상을 고르면 AI 인사이트와 액션 포인트를 오른쪽에 크게 보여줍니다.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const bullets = splitBullets(article.summary_ko, article.summary, article.insight, overallInsight);
+  const tags = article.tags || [];
+  const sentiment = getSentimentMeta(article.sentiment);
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={article.id}
+        initial={{ opacity: 0, x: 18 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -12 }}
+        transition={{ duration: 0.2 }}
+        className="h-full"
+      >
+        <Card className="h-full rounded-[32px] bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(8,12,24,1))]">
+          <ScrollArea className="h-full max-h-[calc(100vh-190px)] px-6 py-6 lg:max-h-[calc(100vh-170px)]">
+            <div className="space-y-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 gap-4">
+                  <div className="h-[126px] w-[176px] shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-[#0E1527]">
+                    <img
+                      src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
+                      alt={article.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-white/45">
+                      <span className="font-medium text-[#8EF3C5]">{article.source}</span>
+                      <span>{formatDate(article.published_at)}</span>
+                      <span>{formatTime(article.published_at)}</span>
+                    </div>
+                    <h2 className="mt-3 text-[30px] font-semibold leading-[1.35] text-white">{article.title_ko || article.title}</h2>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Badge className={cn(sentiment.className)}>{sentiment.label}</Badge>
+                      {article.tier_label && <Badge className={cn(tierTone(article.tier))}>{article.tier_label}</Badge>}
+                      {article.layer_label && <Badge className="border-white/10 bg-white/[0.03] text-white/65">{article.layer_label}</Badge>}
+                      {article.region_label && <Badge className="border-cyan-300/12 bg-cyan-300/8 text-cyan-100">{article.region_label}</Badge>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Card className="rounded-[26px] bg-white/[0.03]">
+                <CardHeader>
+                  <CardTitle className="text-[#9EF7CC]">INSIGHT</CardTitle>
+                  <CardDescription>영상 인사이트와 전체 시장 흐름을 함께 정리했습니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
+                  <p>{article.insight || overallInsight || "분석 요약을 준비 중입니다."}</p>
+                  {bullets.length > 0 && (
+                    <ul className="space-y-3 text-base leading-8 text-white/74">
+                      {bullets.map((bullet) => (
+                        <li key={bullet} className="flex gap-3">
+                          <span className="mt-2 text-white/45">▸</span>
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[26px] border-amber-300/12 bg-amber-300/[0.04]">
+                <CardHeader>
+                  <CardTitle className="text-[#FFD27D]">ACTION POINT</CardTitle>
+                  <CardDescription>실전 대응에 바로 연결되는 메모입니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-[17px] leading-8 text-white/82">
+                  <p>{article.summary_ko || article.summary || article.insight || "액션 포인트를 준비 중입니다."}</p>
+                  <div className="rounded-2xl border border-white/8 bg-black/10 p-4 text-sm leading-7 text-white/62">
+                    {article.source_role || article.layer_label || "전문가 해설"} 관점에서 나온 내용입니다. 실제 매매 전에는 원문 영상과 주요 수급/실적 데이터를 함께 확인하세요.
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[26px] bg-white/[0.03]">
+                <CardHeader>
+                  <CardTitle>관련 태그</CardTitle>
+                  <CardDescription>주제 태그와 원문 링크를 빠르게 확인할 수 있습니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="flex flex-wrap gap-2">
+                    {tags.length > 0 ? (
+                      tags.map((tag) => (
+                        <Badge key={tag} className="border-white/8 bg-[#1C2640] text-white/65">
+                          {tag}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-white/45">등록된 태그가 없습니다.</span>
+                    )}
+                  </div>
+                  <Separator />
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/78 transition hover:border-white/20 hover:text-white"
+                    >
+                      <ExternalLink size={14} />
+                      원문 보기
+                    </a>
+                    <a
+                      href={article.video_url || article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#8EF3C5]/20 bg-[#8EF3C5]/10 px-4 py-2 text-sm text-[#C5FFE3] transition hover:bg-[#8EF3C5]/14"
+                    >
+                      <Play size={14} />
+                      영상 열기
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
+        </Card>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
 export function VideoNewsFeed() {
   const [payload, setPayload] = useState<VideoNewsResponse | null>(null);
   const [topic, setTopic] = useState("all");
+  const [tier, setTier] = useState("all");
+  const [source, setSource] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<NewsArticle | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const load = useCallback(async (topicValue: string) => {
     setIsLoading(true);
     try {
-      const data = await newsApi.videos(topicValue, 24);
+      const data = await newsApi.videos(topicValue, 36);
       setPayload(data);
     } catch {
-      setPayload({ videos: [], topics: [{ id: "all", label: "전체" }], overall_insight: "유튜브 영상을 불러오지 못했습니다.", updated_at: new Date().toISOString() });
+      setPayload({
+        videos: [],
+        topics: [{ id: "all", label: "전체" }],
+        tier_filters: [],
+        source_filters: [],
+        desk_guide: { layers: [], excluded: [] },
+        channel_consensus: [],
+        market_score: 50,
+        overall_insight: "유튜브 영상을 불러오지 못했습니다.",
+        updated_at: new Date().toISOString(),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -195,63 +434,252 @@ export function VideoNewsFeed() {
     return () => clearInterval(id);
   }, [load, topic]);
 
+  useEffect(() => {
+    setSource("all");
+  }, [topic, tier]);
+
   const topics = useMemo(() => payload?.topics || [{ id: "all", label: "전체" }], [payload]);
+  const tierFilters = useMemo(() => payload?.tier_filters || [], [payload]);
+  const sourceFilters = useMemo(() => payload?.source_filters || [], [payload]);
   const videos = payload?.videos || [];
 
+  const filteredVideos = useMemo(() => {
+    return videos.filter((article) => {
+      if (tier !== "all" && article.tier !== tier) return false;
+      if (source !== "all" && article.source !== source) return false;
+      return true;
+    });
+  }, [source, tier, videos]);
+
+  const cards = useMemo(() => summaryCards(filteredVideos, payload?.market_score ?? 50), [filteredVideos, payload?.market_score]);
+
+  const filteredConsensus = useMemo(() => {
+    if (!payload?.channel_consensus?.length) return [];
+    if (tier === "all" && source === "all") return payload.channel_consensus;
+    return payload.channel_consensus.filter((item) => {
+      if (tier !== "all" && item.tier !== tier) return false;
+      if (source !== "all" && item.source !== source) return false;
+      return true;
+    });
+  }, [payload, source, tier]);
+
+  useEffect(() => {
+    if (filteredVideos.length === 0) {
+      setSelected(null);
+      return;
+    }
+    if (!selected || !filteredVideos.some((item) => item.id === selected.id)) {
+      setSelected(filteredVideos[0]);
+    }
+  }, [filteredVideos, selected]);
+
+  const selectArticle = (article: NewsArticle) => {
+    setSelected(article);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSheetOpen(true);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a]">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0">
-        <span className="text-xs font-mono text-[#ddd]">유튜브 뉴스</span>
-        <span className="text-2xs font-mono text-[#555] hidden md:block">· 실시간 최신 영상 + 태그 + 팝업 인사이트</span>
-        <div className="flex-1" />
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {topics.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTopic(item.id)}
-              className={`px-2 py-0.5 rounded-full text-2xs font-mono whitespace-nowrap ${
-                topic === item.id ? "bg-[#ff6600] text-black font-semibold" : "text-[#666] hover:text-[#bbb]"
-              }`}
-            >
-              #{item.label}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => load(topic)} disabled={isLoading} className="text-[#444] hover:text-[#ddd] disabled:opacity-40">
-          <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-        </button>
-      </div>
+    <div className="h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(47,83,160,0.22),transparent_35%),linear-gradient(180deg,#09101F_0%,#060B14_100%)] text-white">
+      <ScrollArea className="h-full px-4 py-4 md:px-6 md:py-5">
+        <div className="mx-auto flex max-w-[1680px] flex-col gap-5 pb-6">
+          <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+            <CardContent className="flex flex-col gap-5 p-5 md:p-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-[#9EF7CC]">
+                    <Sparkles size={18} />
+                    <span className="text-lg font-semibold">AI 분석 인사이트</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-white/55">영상 뉴스 리스트는 더 작고 빠르게, 선택한 카드의 AI 분석은 오른쪽 큰 패널에서 읽기 좋게 정리했습니다.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-white/40">업데이트 {payload ? formatTime(payload.updated_at) : "방금"}</div>
+                  <button
+                    onClick={() => load(topic)}
+                    disabled={isLoading}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/70 transition hover:border-white/20 hover:text-white disabled:opacity-40"
+                  >
+                    <RefreshCw size={13} className={isLoading ? "animate-spin" : ""} />
+                    새로고침
+                  </button>
+                </div>
+              </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        <div className="rounded-xl border border-[#242424] bg-[#111] p-4 space-y-2">
-          <div className="text-xs font-semibold text-[#ff8833]">종합 인사이트</div>
-          <p className="text-sm text-[#e6e6e6] leading-relaxed">{payload?.overall_insight || "유튜브 영상을 불러오는 중입니다."}</p>
-          <div className="text-2xs font-mono text-[#666]">업데이트: {payload ? formatTime(payload.updated_at) : "방금"}</div>
-        </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {cards.map((card) => (
+                  <MetricCard key={card.title} title={card.title} value={card.value} hint={card.hint} accent={card.accent} />
+                ))}
+              </div>
 
-        {isLoading && videos.length === 0 ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="text-center space-y-2">
-              <RefreshCw size={20} className="animate-spin text-[#ff6600] mx-auto" />
-              <div className="text-xs text-[#666] font-mono">유튜브 영상과 인사이트를 정리하는 중...</div>
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-2">
+                  <div className="text-xs text-white/45">주제</div>
+                  <div className="flex max-w-full flex-wrap gap-2">
+                    {topics.map((item) => (
+                      <FilterButton key={item.id} active={topic === item.id} label={item.label} onClick={() => setTopic(item.id)} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid flex-1 gap-3 md:grid-cols-2 xl:max-w-[760px]">
+                  <div className="space-y-2">
+                    <div className="text-xs text-white/45">레이어</div>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterButton active={tier === "all"} label="전체" count={videos.length} onClick={() => setTier("all")} />
+                      {tierFilters.map((item) => (
+                        <FilterButton key={item.id} active={tier === item.id} label={item.label} count={item.count} onClick={() => setTier(item.id)} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs text-white/45">채널</div>
+                    <div className="flex max-h-[90px] flex-wrap gap-2 overflow-auto pr-1">
+                      <FilterButton active={source === "all"} label="전체" count={videos.length} onClick={() => setSource("all")} />
+                      {sourceFilters.map((item) => (
+                        <FilterButton key={item.id} active={source === item.id} label={item.label} count={item.count} onClick={() => setSource(item.id)} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {payload?.desk_guide?.layers?.length ? (
+            <Card className="rounded-[30px] border-white/10 bg-white/[0.028]">
+              <CardHeader>
+                <div className="flex items-center gap-3 text-[#B4C2FF]">
+                  <ShieldCheck size={18} />
+                  <CardTitle>AI 투자 컨센서스 엔진용 유튜브 레이어</CardTitle>
+                </div>
+                <CardDescription>원천 데이터 → 전문가 해석 → 미래산업 순으로 읽게 구성했습니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 xl:grid-cols-3">
+                  {payload.desk_guide.layers.map((layer) => (
+                    <GuideLayerCard key={layer.id} layer={layer} />
+                  ))}
+                </div>
+                {!!payload.desk_guide.excluded.length && (
+                  <div className="rounded-[24px] border border-rose-300/10 bg-rose-300/[0.04] p-4">
+                    <div className="text-sm font-medium text-rose-100">초기 서비스에서 제외하는 채널</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {payload.desk_guide.excluded.map((item) => (
+                        <Badge key={item} className="border-rose-200/10 bg-black/10 text-rose-100/75">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <div className="relative grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.95fr)] xl:grid-cols-[minmax(0,0.88fr)_minmax(520px,1.12fr)]">
+            <div className="space-y-5">
+              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2 text-white">
+                    <BarChart3 size={16} className="text-[#9EF7CC]" />
+                    <CardTitle>종합 인사이트</CardTitle>
+                  </div>
+                  <CardDescription>{payload?.overall_insight || "유튜브 영상을 불러오는 중입니다."}</CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <CardTitle>뉴스 리스트</CardTitle>
+                      <CardDescription>카드는 짧게, 읽기는 오른쪽에서 길게 보는 구조입니다.</CardDescription>
+                    </div>
+                    <div className="text-xs text-white/40">총 {filteredVideos.length}건</div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoading && filteredVideos.length === 0 ? (
+                    <div className="flex h-[320px] items-center justify-center">
+                      <div className="space-y-3 text-center">
+                        <RefreshCw size={18} className="mx-auto animate-spin text-[#8EF3C5]" />
+                        <div className="text-sm text-white/45">유튜브 영상과 인사이트를 정리하는 중...</div>
+                      </div>
+                    </div>
+                  ) : filteredVideos.length === 0 ? (
+                    <div className="flex h-[320px] items-center justify-center text-sm text-white/45">현재 조건에 맞는 영상이 없습니다.</div>
+                  ) : (
+                    <Virtuoso
+                      style={{ height: 720 }}
+                      totalCount={filteredVideos.length}
+                      overscan={300}
+                      itemContent={(index) => {
+                        const article = filteredVideos[index];
+                        return (
+                          <div className="pb-3">
+                            <VideoListCard article={article} active={selected?.id === article.id} onSelect={selectArticle} />
+                          </div>
+                        );
+                      }}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2 text-white">
+                    <Tags size={16} className="text-[#B4C2FF]" />
+                    <CardTitle>채널 컨센서스</CardTitle>
+                  </div>
+                  <CardDescription>현재 필터에서 같은 방향을 말하는 채널을 묶었습니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {filteredConsensus.length > 0 ? (
+                    filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)
+                  ) : (
+                    <div className="text-sm text-white/45">현재 필터에 맞는 컨센서스가 없습니다.</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="pointer-events-none absolute left-[47.5%] top-[38%] z-10 hidden -translate-x-1/2 xl:flex">
+              <div className="flex items-center gap-2 text-[#8EF3C5]/55">
+                <div className="h-px w-12 bg-[#8EF3C5]/25" />
+                <div className="rounded-full border border-[#8EF3C5]/25 bg-[#8EF3C5]/10 p-2 shadow-[0_8px_22px_rgba(15,200,160,0.12)]">
+                  <ArrowRight size={14} />
+                </div>
+                <div className="h-px w-12 bg-[#8EF3C5]/25" />
+              </div>
+            </div>
+
+            <div className="hidden lg:block">
+              <div className="mb-3 hidden items-center gap-2 px-1 text-[11px] uppercase tracking-[0.24em] text-white/32 xl:flex">
+                <span>Selected insight</span>
+                <div className="h-px flex-1 bg-white/8" />
+              </div>
+              <div className="sticky top-0 h-[calc(100vh-132px)]">
+                <DetailPanel article={selected} overallInsight={payload?.overall_insight} />
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {videos.map((article) => (
-              <VideoCard key={article.id} article={article} onOpenInsight={setSelected} />
-            ))}
-          </div>
-        )}
+        </div>
+      </ScrollArea>
 
-        {!isLoading && videos.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-xs font-mono text-[#555]">
-            현재 조건에 맞는 영상이 없습니다.
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="lg:hidden">
+          <SheetHeader>
+            <SheetTitle>{selected ? selected.title_ko || selected.title : "영상 인사이트"}</SheetTitle>
+            <SheetDescription>모바일에서는 하단 시트로 상세 분석을 보여줍니다.</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4 pt-2">
+            <DetailPanel article={selected} overallInsight={payload?.overall_insight} />
           </div>
-        )}
-      </div>
-
-      <VideoInsightModal article={selected} open={!!selected} onOpenChange={(open) => !open && setSelected(null)} />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

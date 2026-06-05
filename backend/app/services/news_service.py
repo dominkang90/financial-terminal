@@ -87,6 +87,26 @@ TOPIC_KEYWORDS = {
     "ev-battery": ["전기차", "2차전지", "배터리", "테슬라", "리튬", "에코프로", "lg에너지솔루션", "catl"],
 }
 
+MARKET_RELEVANCE_KEYWORDS = {
+    4: ["코스피", "코스닥", "국내증시", "미국증시", "나스닥", "s&p", "다우", "주식시장", "stock market"],
+    3: ["주식", "증시", "종목", "실적", "어닝", "per", "pbr", "배당", "상장", "ipo", "etf", "환율", "금리", "연준", "fed", "반도체", "ai", "엔비디아", "삼성전자", "sk하이닉스", "테슬라", "전기차", "2차전지", "배터리", "비트코인", "이더리움", "채권", "달러", "원화", "거시경제"],
+    2: ["기업", "빅테크", "경기", "침체", "인플레이션", "cpi", "ppi", "고용", "관세", "수출", "파운드리", "hbm", "리서치", "투자", "포트폴리오", "자산", "크립토"],
+}
+
+MARKET_EXCLUSION_KEYWORDS = {
+    5: ["개표", "투표", "선거", "대통령", "총리", "국회", "특검", "탄핵", "청와대", "북한", "시진핑", "전쟁", "살인", "체포", "사망"],
+    4: ["날씨", "폭염", "호우", "태풍", "지진", "사건", "사고", "화재", "실종", "연예", "아이돌", "드라마", "영화", "축구", "야구", "농구", "배구", "골프"],
+    2: ["속보", "뉴스쏙", "뉴스센터", "현장", "생중계"],
+}
+
+FINANCE_FOCUSED_SOURCES = {"매일경제TV", "삼프로TV 3PROTV", "이데일리TV", "조선비즈"}
+
+TITLE_MARKET_KEYWORDS = [
+    "주식", "증시", "코스피", "코스닥", "국내증시", "미국증시", "나스닥", "s&p", "다우",
+    "실적", "환율", "금리", "연준", "fed", "반도체", "ai", "엔비디아", "삼성전자",
+    "sk하이닉스", "테슬라", "비트코인", "이더리움", "2차전지", "배터리", "ipo", "etf", "투자",
+]
+
 
 def _clean_html(text: str) -> str:
     if not text:
@@ -399,6 +419,60 @@ def _detect_topic(text: str, topic_hint: Optional[str] = None) -> str:
     return topic_hint or "macro"
 
 
+def _score_market_relevance(text: str, source: str) -> int:
+    lowered = (text or "").lower()
+    score = 0
+
+    for weight, keywords in MARKET_RELEVANCE_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword.lower() in lowered:
+                score += weight
+
+    for weight, keywords in MARKET_EXCLUSION_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword.lower() in lowered:
+                score -= weight
+
+    if source in FINANCE_FOCUSED_SOURCES:
+        score += 3
+
+    if any(keyword.lower() in lowered for keyword in TOPIC_KEYWORDS["macro"]):
+        score += 1
+
+    return score
+
+
+
+def _has_title_market_signal(title: str) -> bool:
+    lowered = (title or "").lower()
+    return any(keyword.lower() in lowered for keyword in TITLE_MARKET_KEYWORDS)
+
+
+
+def _count_market_keyword_hits(text: str) -> int:
+    lowered = (text or "").lower()
+    hits = 0
+    for keywords in MARKET_RELEVANCE_KEYWORDS.values():
+        for keyword in keywords:
+            if keyword.lower() in lowered:
+                hits += 1
+    return hits
+
+
+
+def _is_market_video(title: str, summary: str, source: str) -> bool:
+    text = f"{title} {summary}".strip()
+    score = _score_market_relevance(text, source)
+    title_signal = _has_title_market_signal(title)
+    keyword_hits = _count_market_keyword_hits(text)
+
+    if source in FINANCE_FOCUSED_SOURCES:
+        return score >= 3 and (title_signal or keyword_hits >= 2)
+
+    return score >= 5 and title_signal
+
+
+
 def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = None) -> List[str]:
     tags: List[str] = []
     if base_tags:
@@ -453,6 +527,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
             for entry in parsed.entries[: max(6, limit // max(len(YOUTUBE_CHANNELS), 1) + 2)]:
                 title = (entry.get("title") or "").strip()
                 summary = _clean_html(entry.get("summary") or entry.get("media_description") or "")[:500]
+                if not _is_market_video(title, summary, channel["source"]):
+                    continue
                 published_at, published_ts = _parse_published(entry)
                 link = entry.get("link", "")
                 video_id = _extract_youtube_id(link)

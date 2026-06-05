@@ -405,6 +405,7 @@ export function VideoNewsFeed() {
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<NewsArticle | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [detailSide, setDetailSide] = useState<"bottom" | "right">("right");
 
   const load = useCallback(async (topicValue: string) => {
     setIsLoading(true);
@@ -433,6 +434,13 @@ export function VideoNewsFeed() {
     const id = setInterval(() => load(topic), 300_000);
     return () => clearInterval(id);
   }, [load, topic]);
+
+  useEffect(() => {
+    const syncDetailSide = () => setDetailSide(window.innerWidth < 1024 ? "bottom" : "right");
+    syncDetailSide();
+    window.addEventListener("resize", syncDetailSide);
+    return () => window.removeEventListener("resize", syncDetailSide);
+  }, []);
 
   useEffect(() => {
     setSource("all");
@@ -466,18 +474,19 @@ export function VideoNewsFeed() {
   useEffect(() => {
     if (filteredVideos.length === 0) {
       setSelected(null);
+      setSheetOpen(false);
       return;
     }
-    if (!selected || !filteredVideos.some((item) => item.id === selected.id)) {
-      setSelected(filteredVideos[0]);
+
+    if (selected && !filteredVideos.some((item) => item.id === selected.id)) {
+      setSelected(null);
+      setSheetOpen(false);
     }
   }, [filteredVideos, selected]);
 
   const selectArticle = (article: NewsArticle) => {
     setSelected(article);
-    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-      setSheetOpen(true);
-    }
+    setSheetOpen(true);
   };
 
   return (
@@ -578,102 +587,82 @@ export function VideoNewsFeed() {
             </Card>
           ) : null}
 
-          <div className="relative grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.95fr)] xl:grid-cols-[minmax(0,0.88fr)_minmax(520px,1.12fr)]">
-            <div className="space-y-5">
-              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-2 text-white">
-                    <BarChart3 size={16} className="text-[#9EF7CC]" />
-                    <CardTitle>종합 인사이트</CardTitle>
-                  </div>
-                  <CardDescription>{payload?.overall_insight || "유튜브 영상을 불러오는 중입니다."}</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <CardTitle>뉴스 리스트</CardTitle>
-                      <CardDescription>카드는 짧게, 읽기는 오른쪽에서 길게 보는 구조입니다.</CardDescription>
-                    </div>
-                    <div className="text-xs text-white/40">총 {filteredVideos.length}건</div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoading && filteredVideos.length === 0 ? (
-                    <div className="flex h-[320px] items-center justify-center">
-                      <div className="space-y-3 text-center">
-                        <RefreshCw size={18} className="mx-auto animate-spin text-[#8EF3C5]" />
-                        <div className="text-sm text-white/45">유튜브 영상과 인사이트를 정리하는 중...</div>
-                      </div>
-                    </div>
-                  ) : filteredVideos.length === 0 ? (
-                    <div className="flex h-[320px] items-center justify-center text-sm text-white/45">현재 조건에 맞는 영상이 없습니다.</div>
-                  ) : (
-                    <Virtuoso
-                      style={{ height: 720 }}
-                      totalCount={filteredVideos.length}
-                      overscan={300}
-                      itemContent={(index) => {
-                        const article = filteredVideos[index];
-                        return (
-                          <div className="pb-3">
-                            <VideoListCard article={article} active={selected?.id === article.id} onSelect={selectArticle} />
-                          </div>
-                        );
-                      }}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-2 text-white">
-                    <Tags size={16} className="text-[#B4C2FF]" />
-                    <CardTitle>채널 컨센서스</CardTitle>
-                  </div>
-                  <CardDescription>현재 필터에서 같은 방향을 말하는 채널을 묶었습니다.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {filteredConsensus.length > 0 ? (
-                    filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)
-                  ) : (
-                    <div className="text-sm text-white/45">현재 필터에 맞는 컨센서스가 없습니다.</div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="pointer-events-none absolute left-[47.5%] top-[38%] z-10 hidden -translate-x-1/2 xl:flex">
-              <div className="flex items-center gap-2 text-[#8EF3C5]/55">
-                <div className="h-px w-12 bg-[#8EF3C5]/25" />
-                <div className="rounded-full border border-[#8EF3C5]/25 bg-[#8EF3C5]/10 p-2 shadow-[0_8px_22px_rgba(15,200,160,0.12)]">
-                  <ArrowRight size={14} />
+          <div className="space-y-5">
+            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2 text-white">
+                  <BarChart3 size={16} className="text-[#9EF7CC]" />
+                  <CardTitle>종합 인사이트</CardTitle>
                 </div>
-                <div className="h-px w-12 bg-[#8EF3C5]/25" />
-              </div>
-            </div>
+                <CardDescription>{payload?.overall_insight || "유튜브 영상을 불러오는 중입니다."}</CardDescription>
+              </CardHeader>
+            </Card>
 
-            <div className="hidden lg:block">
-              <div className="mb-3 hidden items-center gap-2 px-1 text-[11px] uppercase tracking-[0.24em] text-white/32 xl:flex">
-                <span>Selected insight</span>
-                <div className="h-px flex-1 bg-white/8" />
-              </div>
-              <div className="sticky top-0 h-[calc(100vh-132px)]">
-                <DetailPanel article={selected} overallInsight={payload?.overall_insight} />
-              </div>
-            </div>
+            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>뉴스 리스트</CardTitle>
+                    <CardDescription>카드를 클릭하거나 터치하면 팝업으로 상세 분석을 열고, 평소에는 더 많은 리스트를 한 번에 볼 수 있습니다.</CardDescription>
+                  </div>
+                  <div className="text-xs text-white/40">총 {filteredVideos.length}건</div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading && filteredVideos.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center">
+                    <div className="space-y-3 text-center">
+                      <RefreshCw size={18} className="mx-auto animate-spin text-[#8EF3C5]" />
+                      <div className="text-sm text-white/45">유튜브 영상과 인사이트를 정리하는 중...</div>
+                    </div>
+                  </div>
+                ) : filteredVideos.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center text-sm text-white/45">현재 조건에 맞는 영상이 없습니다.</div>
+                ) : (
+                  <Virtuoso
+                    style={{ height: 720 }}
+                    totalCount={filteredVideos.length}
+                    overscan={300}
+                    itemContent={(index) => {
+                      const article = filteredVideos[index];
+                      return (
+                        <div className="pb-3">
+                          <VideoListCard article={article} active={selected?.id === article.id && sheetOpen} onSelect={selectArticle} />
+                        </div>
+                      );
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[30px] border-white/10 bg-white/[0.03]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2 text-white">
+                  <Tags size={16} className="text-[#B4C2FF]" />
+                  <CardTitle>채널 컨센서스</CardTitle>
+                </div>
+                <CardDescription>현재 필터에서 같은 방향을 말하는 채널을 묶었습니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {filteredConsensus.length > 0 ? (
+                  filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)
+                ) : (
+                  <div className="text-sm text-white/45">현재 필터에 맞는 컨센서스가 없습니다.</div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </ScrollArea>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="lg:hidden">
+        <SheetContent side={detailSide} className={cn(detailSide === "bottom" ? "lg:hidden" : "w-full max-w-[780px]")}>
           <SheetHeader>
             <SheetTitle>{selected ? selected.title_ko || selected.title : "영상 인사이트"}</SheetTitle>
-            <SheetDescription>모바일에서는 하단 시트로 상세 분석을 보여줍니다.</SheetDescription>
+            <SheetDescription>
+              {detailSide === "bottom" ? "모바일에서는 하단 시트로 상세 분석을 보여줍니다." : "카드를 클릭했을 때만 상세 분석 팝업이 열립니다."}
+            </SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-4 pt-2">
             <DetailPanel article={selected} overallInsight={payload?.overall_insight} />

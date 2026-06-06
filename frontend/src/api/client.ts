@@ -57,8 +57,8 @@ export const marketApi = {
 
 // ── 뉴스 ──────────────────────────────────────────────────
 export const newsApi = {
-  list: (symbol?: string, limit = 30): Promise<NewsArticle[]> =>
-    api.get("/news", { params: { symbol, limit } }).then((r) => r.data),
+  list: (symbol?: string, limit = 30, market: "kr" | "us" = "kr"): Promise<NewsArticle[]> =>
+    api.get("/news", { params: { symbol, limit, market } }).then((r) => r.data),
 
   videos: (topic = "all", limit = 24): Promise<VideoNewsResponse> =>
     api.get("/news/videos", { params: { topic, limit } }).then((r) => r.data),

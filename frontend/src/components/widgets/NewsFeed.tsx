@@ -1,9 +1,44 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ExternalLink, RefreshCw, TrendingUp, TrendingDown, Minus, Play, Building2, ImageOff } from "lucide-react";
 import { newsApi } from "@/api/client";
 import type { NewsArticle } from "@/types";
 import { useMarketStore } from "@/store/marketStore";
-import { NewsDeskGuide } from "@/components/widgets/NewsDeskGuide";
+
+
+const SECTOR_FILTERS = [
+  { id: "all", label: "전체", keywords: [] },
+  { id: "semis", label: "반도체", keywords: ["반도체", "엔비디아", "nvidia", "hbm", "tsmc", "삼성전자", "sk하이닉스", "파운드리", "칩"] },
+  { id: "ai", label: "AI", keywords: ["ai", "인공지능", "openai", "데이터센터", "gpu", "소프트웨어"] },
+  { id: "space", label: "우주", keywords: ["우주", "space", "spacex", "위성", "발사체", "항공우주"] },
+  { id: "ev", label: "전기차/배터리", keywords: ["전기차", "ev", "배터리", "2차전지", "리튬", "테슬라", "catl"] },
+  { id: "bio", label: "바이오", keywords: ["바이오", "제약", "헬스케어", "임상", "fda", "신약"] },
+  { id: "finance", label: "금융", keywords: ["은행", "증권", "보험", "금융", "카드", "핀테크"] },
+  { id: "energy", label: "에너지", keywords: ["에너지", "원전", "석유", "가스", "태양광", "전력", "전기요금"] },
+  { id: "defense", label: "방산", keywords: ["방산", "국방", "무기", "defense", "항공", "미사일"] },
+  { id: "crypto", label: "암호화폐", keywords: ["비트코인", "이더리움", "코인", "crypto", "bitcoin", "블록체인"] },
+  { id: "macro", label: "거시경제", keywords: ["금리", "연준", "fed", "환율", "달러", "물가", "cpi", "고용", "국채", "경기"] },
+] as const;
+
+type SectorFilterId = typeof SECTOR_FILTERS[number]["id"];
+
+function articleMatchesSector(article: NewsArticle, sectorId: SectorFilterId) {
+  if (sectorId === "all") return true;
+  const sector = SECTOR_FILTERS.find((item) => item.id === sectorId);
+  if (!sector) return true;
+  const haystack = [
+    article.title,
+    article.title_ko,
+    article.summary,
+    article.summary_ko,
+    article.topic_label,
+    ...(article.tags || []),
+    ...(article.tickers || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return sector.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
+}
 
 const SENTIMENT_CONFIG = {
   positive: {
@@ -177,26 +212,25 @@ function NewsCard({ article }: { article: NewsArticle }) {
   );
 }
 
-export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
+export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boolean; market?: "kr" | "us" }) {
   const { activeSymbol } = useMarketStore();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "positive" | "negative" | "hot" | "video">("all");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [investorStyle, setInvestorStyle] = useState<"beginner" | "shortterm" | "longterm">("shortterm");
+  const [sectorFilter, setSectorFilter] = useState<SectorFilterId>("all");
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
       const symbol = symbolFilter ? activeSymbol : undefined;
-      const data = await newsApi.list(symbol, 40);
+      const data = await newsApi.list(symbol, 40, market);
       setArticles(Array.isArray(data) ? data : []);
     } catch {
       setArticles([]);
     } finally {
       setIsLoading(false);
     }
-  }, [activeSymbol, symbolFilter]);
+  }, [activeSymbol, symbolFilter, market]);
 
   useEffect(() => {
     load();
@@ -205,41 +239,17 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
   }, [load]);
 
   useEffect(() => {
-    setSourceFilter("all");
-  }, [symbolFilter, activeSymbol]);
+    setSectorFilter("all");
+  }, [symbolFilter, activeSymbol, market]);
 
-  const sourceCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const article of articles) {
-      counts.set(article.source, (counts.get(article.source) || 0) + 1);
-    }
-    return Object.fromEntries(counts.entries());
-  }, [articles]);
-
-  const topSources = useMemo(() => {
-    return Object.entries(sourceCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([source]) => source);
-  }, [sourceCounts]);
-
-  const sourcePreviewArticles = useMemo(() => {
-    const bySource = new Map<string, NewsArticle>();
-    for (const article of articles) {
-      if (!bySource.has(article.source)) {
-        bySource.set(article.source, article);
-      }
-    }
-    return Array.from(bySource.values());
-  }, [articles]);
 
   const filtered = articles.filter((a) => {
-    const sourceMatched = sourceFilter === "all" || a.source === sourceFilter;
-    if (filter === "positive") return a.sentiment === "positive" && sourceMatched;
-    if (filter === "negative") return a.sentiment === "negative" && sourceMatched;
-    if (filter === "hot") return a.importance === "high" && sourceMatched;
-    if (filter === "video") return a.media_type === "video" && sourceMatched;
-    return sourceMatched;
+    const sectorMatched = articleMatchesSector(a, sectorFilter);
+    if (filter === "positive") return a.sentiment === "positive" && sectorMatched;
+    if (filter === "negative") return a.sentiment === "negative" && sectorMatched;
+    if (filter === "hot") return a.importance === "high" && sectorMatched;
+    if (filter === "video") return a.media_type === "video" && sectorMatched;
+    return sectorMatched;
   });
 
   const videoCount = articles.filter((a) => a.media_type === "video").length;
@@ -248,9 +258,9 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
     <div className="flex flex-col h-full bg-[#0a0a0a]">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0 flex-wrap">
         <span className="text-xs font-mono text-[#888]">
-          {symbolFilter ? `${activeSymbol} 뉴스` : "한국 주요 증시 뉴스"}
+          {symbolFilter ? `${activeSymbol} 뉴스` : market === "us" ? "미국 주요 시장 뉴스" : "한국 주요 시장 뉴스"}
         </span>
-        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 뉴스 + 공시 + 리포트 참고 데스크</span>
+        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 분야별로 빠르게 거르는 시장 뉴스</span>
         <div className="flex-1" />
         <div className="flex items-center gap-0.5 overflow-x-auto">
           {([
@@ -289,44 +299,25 @@ export function NewsFeed({ symbolFilter }: { symbolFilter?: boolean }) {
 
       {(!isLoading || articles.length > 0) && (
         <div className="flex-1 overflow-y-auto p-3">
-          {!symbolFilter && (
-            <NewsDeskGuide
-              investorStyle={investorStyle}
-              onInvestorStyleChange={setInvestorStyle}
-              previewArticles={sourcePreviewArticles}
-              selectedSource={sourceFilter}
-              onSelectSource={setSourceFilter}
-              sourceCounts={sourceCounts}
-            />
-          )}
-
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
-            <span className="text-2xs font-mono text-[#555] mr-1">매체 필터</span>
-            <button
-              type="button"
-              onClick={() => setSourceFilter("all")}
-              className={`px-2 py-1 rounded text-2xs font-mono border ${
-                sourceFilter === "all"
-                  ? "bg-[#1d1d1d] text-[#f2f2f2] border-[#444]"
-                  : "border-[#222] text-[#666] hover:text-[#999]"
-              }`}
-            >
-              전체 {articles.length > 0 ? articles.length : ""}
-            </button>
-            {topSources.map((source) => (
-              <button
-                key={source}
-                type="button"
-                onClick={() => setSourceFilter(source)}
-                className={`px-2 py-1 rounded text-2xs font-mono border ${
-                  sourceFilter === source
-                    ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
-                    : "border-[#222] text-[#666] hover:text-[#999]"
-                }`}
-              >
-                {source} {sourceCounts[source] ?? 0}
-              </button>
-            ))}
+            <span className="text-2xs font-mono text-[#555] mr-1">분야 필터</span>
+            {SECTOR_FILTERS.map((sector) => {
+              const count = articles.filter((article) => articleMatchesSector(article, sector.id)).length;
+              return (
+                <button
+                  key={sector.id}
+                  type="button"
+                  onClick={() => setSectorFilter(sector.id)}
+                  className={`px-2 py-1 rounded text-2xs font-mono border ${
+                    sectorFilter === sector.id
+                      ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
+                      : "border-[#222] text-[#666] hover:text-[#999]"
+                  }`}
+                >
+                  {sector.label} {count > 0 ? count : ""}
+                </button>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">

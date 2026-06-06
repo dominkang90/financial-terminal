@@ -10,8 +10,9 @@ router = APIRouter(prefix="/news", tags=["news"])
 async def news(
     symbol: Optional[str] = Query(None),
     limit: int = Query(30, le=100),
+    market: str = Query("kr"),
 ):
-    return await get_news(symbol, limit)
+    return await get_news(symbol, limit, market)
 
 
 @router.get("/videos")

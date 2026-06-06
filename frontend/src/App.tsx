@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import type { TabId } from "@/types";
 import { TopBar } from "@/components/TopBar/TopBar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
+import { WatchList } from "@/components/widgets/WatchList";
 import { MarketsPage } from "@/components/pages/MarketsPage";
 import { ChartPage } from "@/components/pages/ChartPage";
 import { NewsPage } from "@/components/pages/NewsPage";
@@ -14,6 +16,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("markets");
+  const [watchlistCollapsed, setWatchlistCollapsed] = useState(false);
   const { fetchMe } = useAuthStore();
 
   useEffect(() => {
@@ -36,8 +39,40 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-terminal-bg text-terminal-text-primary">
       <TopBar activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="flex-1 overflow-hidden pb-14 md:pb-0">
-        {renderPage()}
+      <main className="flex flex-1 overflow-hidden pb-14 md:pb-0">
+        <aside className={`hidden md:block flex-shrink-0 border-r border-terminal-border overflow-hidden transition-all duration-200 ${watchlistCollapsed ? "w-12" : "w-56"}`}>
+          {watchlistCollapsed ? (
+            <div className="flex h-full flex-col items-center gap-3 bg-[#0b0b0b] py-3">
+              <button
+                type="button"
+                onClick={() => setWatchlistCollapsed(false)}
+                className="rounded border border-terminal-border p-1 text-terminal-text-secondary hover:text-terminal-text-primary"
+                title="관심종목 열기"
+              >
+                <ChevronRight size={14} />
+              </button>
+              <div className="text-[10px] font-mono text-terminal-text-dim [writing-mode:vertical-rl]">관심종목</div>
+            </div>
+          ) : (
+            <div className="flex h-full flex-col overflow-hidden">
+              <div className="flex items-center justify-between border-b border-terminal-border px-2 py-1.5">
+                <span className="text-2xs font-mono text-terminal-text-dim">GLOBAL WATCHLIST</span>
+                <button
+                  type="button"
+                  onClick={() => setWatchlistCollapsed(true)}
+                  className="rounded border border-terminal-border p-1 text-terminal-text-secondary hover:text-terminal-text-primary"
+                  title="관심종목 닫기"
+                >
+                  <ChevronLeft size={12} />
+                </button>
+              </div>
+              <WatchList />
+            </div>
+          )}
+        </aside>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          {renderPage()}
+        </div>
       </main>
       <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 

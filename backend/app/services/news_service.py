@@ -56,6 +56,29 @@ KOREAN_NEWS_FEEDS = [
     },
 ]
 
+US_MARKET_NEWS_FEEDS = [
+    {
+        "source": "Yahoo Finance",
+        "url": "https://finance.yahoo.com/rss/topstories",
+        "source_logo": "https://s.yimg.com/rz/l/favicon.ico",
+    },
+    {
+        "source": "MarketWatch",
+        "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+        "source_logo": "https://www.marketwatch.com/favicon.ico",
+    },
+    {
+        "source": "CNBC Markets",
+        "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "source_logo": "https://www.cnbc.com/favicon.ico",
+    },
+    {
+        "source": "Reuters Markets",
+        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best",
+        "source_logo": "https://www.reuters.com/favicon.ico",
+    },
+]
+
 YOUTUBE_CHANNELS = [
     # Tier S · Fact
     {"source": "Bloomberg TV", "channel_url": "https://www.youtube.com/@markets", "topic_hint": "macro", "tags": ["금리", "채권", "달러"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
@@ -710,6 +733,30 @@ async def get_korean_market_news(limit: int = 30) -> List[Dict[str, Any]]:
     return trimmed
 
 
+async def get_us_market_news(limit: int = 30) -> List[Dict[str, Any]]:
+    cache_key = f"news:us-market:{limit}"
+    if cache_key in _news_cache:
+        return _news_cache[cache_key]
+
+    articles: List[Dict[str, Any]] = []
+    for feed in US_MARKET_NEWS_FEEDS:
+        try:
+            parsed = await _parse_feed(feed["url"])
+            tasks = [
+                _build_article(entry, feed["source"], feed.get("source_logo"), translate=True)
+                for entry in parsed.entries[: max(limit, 15)]
+            ]
+            articles.extend(await asyncio.gather(*tasks))
+        except Exception:
+            continue
+
+    articles = _dedupe_articles(articles)
+    mixed_articles = _interleave_articles_by_source(articles, limit)
+    trimmed = [{k: v for k, v in article.items() if k != "published_ts"} for article in mixed_articles]
+    _news_cache[cache_key] = trimmed
+    return trimmed
+
+
 async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict[str, Any]]:
     cache_key = f"news:yahoo:{symbol or 'market'}:{limit}"
     if cache_key in _news_cache:
@@ -858,20 +905,22 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
 
 
 def _build_video_insight(title: str, summary: str, content_text: Optional[str], source: str, topic: str, tags: List[str], content_basis: str = "none") -> str:
-    has_content = bool((content_text or "").strip())
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
-
-    if not has_content:
-        return f"이 영상은 자막이나 영상 요약을 가져오지 못해 영상 내용 기반 인사이트를 아직 만들지 못했습니다. 제목 기준으로는 {tag_text} 흐름을 볼 가능성이 큽니다. 영상 열기로 직접 확인해 주세요."
-
-    focus_sentences = _pick_focus_sentences(content_text or "", limit=2)
+    analysis_source = (content_text or summary or title or "").strip()
+    focus_sentences = _pick_focus_sentences(analysis_source, limit=2)
     primary = focus_sentences[0] if focus_sentences else title.strip()
     secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
-    prefix = "자막 기준 핵심" if content_basis == "transcript" else "영상 내용 기준 핵심"
+
+    if content_basis == "transcript":
+        prefix = "자막 기준 핵심"
+    elif content_basis == "video_ai":
+        prefix = "영상 AI 요약 기준 핵심"
+    else:
+        prefix = "제목·설명 기준 핵심"
 
     if secondary:
-        return f"{prefix}: {primary}. 이어서 {secondary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
-    return f"{prefix}: {primary}. 이 영상에서 특히 봐야 할 주제는 {tag_text}입니다."
+        return f"{prefix}: {primary}. 이어서 {secondary}. 체크할 분야는 {tag_text}입니다."
+    return f"{prefix}: {primary}. 체크할 분야는 {tag_text}입니다."
 
 
 def _sentiment_to_stance(sentiment: str) -> str:
@@ -1089,9 +1138,14 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     return result
 
 
-async def get_news(symbol: Optional[str] = None, limit: int = 30) -> List[Dict]:
+async def get_news(symbol: Optional[str] = None, limit: int = 30, market: str = "kr") -> List[Dict]:
     normalized = (symbol or "").upper().strip()
+    market_key = (market or "kr").lower().strip()
     if not normalized:
+        if market_key == "us":
+            us_news = await get_us_market_news(limit)
+            if us_news:
+                return us_news
         return await get_korean_market_news(limit)
 
     if re.fullmatch(r"\d{6}(\.(KS|KQ))?", normalized):

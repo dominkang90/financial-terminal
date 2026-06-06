@@ -81,30 +81,30 @@ US_MARKET_NEWS_FEEDS = [
 
 YOUTUBE_CHANNELS = [
     # Tier S · Fact
-    {"source": "Bloomberg TV", "channel_url": "https://www.youtube.com/@markets", "topic_hint": "macro", "tags": ["금리", "채권", "달러"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
-    {"source": "CNBC Television", "channel_url": "https://www.youtube.com/@CNBCtelevision", "topic_hint": "macro", "tags": ["미국증시", "실적", "연준"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
-    {"source": "Reuters", "channel_url": "https://www.youtube.com/@Reuters", "topic_hint": "macro", "tags": ["속보", "거시경제", "정책"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": False},
-    {"source": "Yahoo Finance", "channel_url": "https://www.youtube.com/@YahooFinance", "topic_hint": "global-tech", "tags": ["미국증시", "기업실적", "시장체크"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
-    {"source": "Federal Reserve", "channel_url": "https://www.youtube.com/@federalreserve", "topic_hint": "macro", "tags": ["연준", "기준금리", "통화정책"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
-    {"source": "IMF", "channel_url": "https://www.youtube.com/@IMFVideos", "topic_hint": "macro", "tags": ["IMF", "세계경제", "전망"], "tier": "s", "layer": "fact", "region": "global", "role": "원천 데이터", "finance_focused": True},
+    {"source": "Bloomberg TV", "channel_id": "UCIALMKvObZNtJ6AmdCLP7Lg", "channel_url": "https://www.youtube.com/@markets", "topic_hint": "macro", "tags": ["금리", "채권", "달러"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
+    {"source": "CNBC Television", "channel_id": "UCrp_UI8XtuYfpiqluWLD7Lw", "channel_url": "https://www.youtube.com/@CNBCtelevision", "topic_hint": "macro", "tags": ["미국증시", "실적", "연준"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
+    {"source": "Reuters", "channel_id": "UChqUTb7kYRX8-EiaN3XFrSQ", "channel_url": "https://www.youtube.com/@Reuters", "topic_hint": "macro", "tags": ["속보", "거시경제", "정책"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": False},
+    {"source": "Yahoo Finance", "channel_id": "UCEAZeUIeJs0IjQiqTCdVSIg", "channel_url": "https://www.youtube.com/@YahooFinance", "topic_hint": "global-tech", "tags": ["미국증시", "기업실적", "시장체크"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
+    {"source": "Federal Reserve", "channel_id": "UCAzhpt9DmG6PnHXjmJTvRGQ", "channel_url": "https://www.youtube.com/@federalreserve", "topic_hint": "macro", "tags": ["연준", "기준금리", "통화정책"], "tier": "s", "layer": "fact", "region": "us", "role": "원천 데이터", "finance_focused": True},
+    {"source": "IMF", "channel_id": "UCmB0FuBmcBfQ7lKcILGJfWQ", "channel_url": "https://www.youtube.com/@IMFVideos", "topic_hint": "macro", "tags": ["IMF", "세계경제", "전망"], "tier": "s", "layer": "fact", "region": "global", "role": "원천 데이터", "finance_focused": True},
     {"source": "한국경제TV", "channel_url": "https://www.youtube.com/@wowtvnews", "topic_hint": "korea-market", "tags": ["코스피", "코스닥", "국내증시"], "tier": "s", "layer": "fact", "region": "kr", "role": "원천 데이터", "finance_focused": True},
-    {"source": "한경 글로벌마켓", "channel_url": "https://www.youtube.com/@HKglobalmarket", "topic_hint": "macro", "tags": ["미국증시", "달러", "거시경제"], "tier": "s", "layer": "fact", "region": "kr", "role": "원천 데이터", "finance_focused": True},
+    {"source": "한경 글로벌마켓", "channel_id": "UCWskYkV4c4S9D__rsfOl2JA", "channel_url": "https://www.youtube.com/@HKglobalmarket", "topic_hint": "macro", "tags": ["미국증시", "달러", "거시경제"], "tier": "s", "layer": "fact", "region": "kr", "role": "원천 데이터", "finance_focused": True},
 
     # Tier A · Analysis
-    {"source": "삼프로TV", "channel_url": "https://www.youtube.com/@3protv", "topic_hint": "macro", "tags": ["거시경제", "전략", "컨센서스"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
+    {"source": "삼프로TV", "channel_id": "UChlv4GSd7OQl3js-jkLOnFA", "channel_url": "https://www.youtube.com/@3protv", "topic_hint": "macro", "tags": ["거시경제", "전략", "컨센서스"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
     {"source": "언더스탠딩", "channel_url": "https://www.youtube.com/@understanding_official", "topic_hint": "macro", "tags": ["해설", "시장구조", "경제흐름"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
     {"source": "이효석아카데미", "channel_url": "https://www.youtube.com/@hyoseokleeacademy", "topic_hint": "global-tech", "tags": ["미국증시", "전략", "매크로"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
-    {"source": "오선의 미국증시", "channel_url": "https://www.youtube.com/@futuresnow", "topic_hint": "global-tech", "tags": ["나스닥", "미국증시", "시황"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
+    {"source": "오선의 미국증시", "channel_id": "UC_JJ_NhRqPKcIOj5Ko3W_3w", "channel_url": "https://www.youtube.com/@futuresnow", "topic_hint": "global-tech", "tags": ["나스닥", "미국증시", "시황"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
     {"source": "매경 월가월부", "channel_url": "https://www.youtube.com/@MKWallgaWallbu", "topic_hint": "global-tech", "tags": ["월가", "빅테크", "섹터"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
     {"source": "미래에셋 Smart Money", "channel_url": "https://www.youtube.com/@smartmoneymiraeasset", "topic_hint": "macro", "tags": ["리서치", "전략", "자산배분"], "tier": "a", "layer": "analysis", "region": "kr", "role": "전문가 해설", "finance_focused": True},
-    {"source": "Bloomberg Technology", "channel_url": "https://www.youtube.com/@BloombergTechnology", "topic_hint": "global-tech", "tags": ["빅테크", "AI", "기업분석"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
-    {"source": "Financial Times", "channel_url": "https://www.youtube.com/@FinancialTimes", "topic_hint": "macro", "tags": ["시장해설", "정책", "세계경제"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
-    {"source": "The Economist", "channel_url": "https://www.youtube.com/@TheEconomist", "topic_hint": "macro", "tags": ["거시경제", "장기전망", "국제정세"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
+    {"source": "Bloomberg Technology", "channel_id": "UCrM7B7SL_g1edFOnmj-SDKg", "channel_url": "https://www.youtube.com/@BloombergTechnology", "topic_hint": "global-tech", "tags": ["빅테크", "AI", "기업분석"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
+    {"source": "Financial Times", "channel_id": "UCoUxsWakJucWg46KW5RsvPw", "channel_url": "https://www.youtube.com/@FinancialTimes", "topic_hint": "macro", "tags": ["시장해설", "정책", "세계경제"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
+    {"source": "The Economist", "channel_id": "UC0p5jTq6Xx_DosDFxVXnWaQ", "channel_url": "https://www.youtube.com/@TheEconomist", "topic_hint": "macro", "tags": ["거시경제", "장기전망", "국제정세"], "tier": "a", "layer": "analysis", "region": "us", "role": "전문가 해설", "finance_focused": True},
 
     # Tier B · Future industries
-    {"source": "NVIDIA", "channel_url": "https://www.youtube.com/@NVIDIA", "topic_hint": "semis-ai", "tags": ["AI", "GPU", "데이터센터"], "tier": "b", "layer": "future", "region": "us", "role": "미래산업", "finance_focused": True},
+    {"source": "NVIDIA", "channel_id": "UCHuiy8bXnmK5nisYHUd1J5g", "channel_url": "https://www.youtube.com/@NVIDIA", "topic_hint": "semis-ai", "tags": ["AI", "GPU", "데이터센터"], "tier": "b", "layer": "future", "region": "us", "role": "미래산업", "finance_focused": True},
     {"source": "안될공학", "channel_url": "https://www.youtube.com/@underKGengineering", "topic_hint": "semis-ai", "tags": ["반도체", "하드웨어", "엔지니어링"], "tier": "b", "layer": "future", "region": "kr", "role": "미래산업", "finance_focused": True},
-    {"source": "안될과학", "channel_url": "https://www.youtube.com/@Unrealscience", "topic_hint": "semis-ai", "tags": ["과학", "기술", "미래산업"], "tier": "b", "layer": "future", "region": "kr", "role": "미래산업", "finance_focused": False},
+    {"source": "안될과학", "channel_id": "UCMc4EmuDxnHPc6pgGW-QWvQ", "channel_url": "https://www.youtube.com/@Unrealscience", "topic_hint": "semis-ai", "tags": ["과학", "기술", "미래산업"], "tier": "b", "layer": "future", "region": "kr", "role": "미래산업", "finance_focused": False},
     {"source": "엔지니어TV", "channel_url": "https://www.youtube.com/@EngineerTVOfficial", "topic_hint": "semis-ai", "tags": ["반도체", "산업체인", "설비"], "tier": "b", "layer": "future", "region": "kr", "role": "미래산업", "finance_focused": True},
 ]
 
@@ -621,14 +621,20 @@ async def translate_article(title: str, summary: str = "", user_api_key: Optiona
     return {"title_ko": title_kr, "summary_ko": summary_kr}
 
 
-async def _build_article(entry: Any, source: str, source_logo: Optional[str] = None, translate: bool = False) -> Dict[str, Any]:
+async def _build_article(
+    entry: Any,
+    source: str,
+    source_logo: Optional[str] = None,
+    translate: bool = False,
+    resolve_image: bool = False,
+) -> Dict[str, Any]:
     title = (entry.get("title") or "").strip()
     summary = _clean_html(entry.get("summary") or entry.get("description") or "")[:400]
     published_at, published_ts = _parse_published(entry)
     media = _extract_media_from_entry(entry)
     article_url = entry.get("link", "")
     image = media.get("image")
-    if not image and article_url:
+    if resolve_image and not image and article_url:
         image = await _resolve_article_image(article_url)
     translation = {"title_ko": None, "summary_ko": None}
     if translate and title:
@@ -656,8 +662,8 @@ async def _build_article(entry: Any, source: str, source_logo: Optional[str] = N
     }
 
 
-async def _parse_feed(url: str) -> Any:
-    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+async def _parse_feed(url: str, timeout: float = 10.0) -> Any:
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
         resp = await client.get(url)
         content = resp.text
 
@@ -676,36 +682,12 @@ async def _parse_feed(url: str) -> Any:
 
 
 async def _resolve_youtube_feed_url(channel: Dict[str, Any]) -> Optional[str]:
-    if channel.get("channel_id"):
-        return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel['channel_id']}"
+    channel_id = channel.get("channel_id")
+    if channel_id:
+        return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
 
-    channel_url = channel.get("channel_url")
-    if not channel_url:
-        return None
-
-    cache_key = f"yt-feed:{channel_url}"
-    if cache_key in _youtube_feed_cache:
-        return _youtube_feed_cache[cache_key]
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
-            resp = await client.get(channel_url)
-            html = resp.text
-    except Exception:
-        return None
-
-    rss_match = re.search(r'https://www\.youtube\.com/feeds/videos\.xml\?channel_id=([^"&]+)', html)
-    if rss_match:
-        feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={rss_match.group(1)}"
-        _youtube_feed_cache[cache_key] = feed_url
-        return feed_url
-
-    channel_match = re.search(r'"channelId":"([^"]+)"', html)
-    if channel_match:
-        feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_match.group(1)}"
-        _youtube_feed_cache[cache_key] = feed_url
-        return feed_url
-
+    # 실시간 로딩을 위해 요청 시점에는 채널 페이지를 크롤링하지 않는다.
+    # 새 유튜브 소스는 channel_id를 코드에 고정한 뒤 활성화한다.
     return None
 
 
@@ -714,18 +696,19 @@ async def get_korean_market_news(limit: int = 30) -> List[Dict[str, Any]]:
     if cache_key in _news_cache:
         return _news_cache[cache_key]
 
-    articles: List[Dict[str, Any]] = []
-    for feed in KOREAN_NEWS_FEEDS:
+    async def fetch_feed(feed: Dict[str, Any]) -> List[Dict[str, Any]]:
         try:
             parsed = await _parse_feed(feed["url"])
             tasks = [
                 _build_article(entry, feed["source"], feed.get("source_logo"), translate=False)
                 for entry in parsed.entries[: max(limit, 15)]
             ]
-            articles.extend(await asyncio.gather(*tasks))
+            return await asyncio.gather(*tasks)
         except Exception:
-            continue
+            return []
 
+    feed_results = await asyncio.gather(*(fetch_feed(feed) for feed in KOREAN_NEWS_FEEDS))
+    articles = [article for feed_articles in feed_results for article in feed_articles]
     articles = _dedupe_articles(articles)
     mixed_articles = _interleave_articles_by_source(articles, limit)
     trimmed = [{k: v for k, v in article.items() if k != "published_ts"} for article in mixed_articles]
@@ -738,18 +721,19 @@ async def get_us_market_news(limit: int = 30) -> List[Dict[str, Any]]:
     if cache_key in _news_cache:
         return _news_cache[cache_key]
 
-    articles: List[Dict[str, Any]] = []
-    for feed in US_MARKET_NEWS_FEEDS:
+    async def fetch_feed(feed: Dict[str, Any]) -> List[Dict[str, Any]]:
         try:
             parsed = await _parse_feed(feed["url"])
             tasks = [
-                _build_article(entry, feed["source"], feed.get("source_logo"), translate=True)
+                _build_article(entry, feed["source"], feed.get("source_logo"), translate=False)
                 for entry in parsed.entries[: max(limit, 15)]
             ]
-            articles.extend(await asyncio.gather(*tasks))
+            return await asyncio.gather(*tasks)
         except Exception:
-            continue
+            return []
 
+    feed_results = await asyncio.gather(*(fetch_feed(feed) for feed in US_MARKET_NEWS_FEEDS))
+    articles = [article for feed_articles in feed_results for article in feed_articles]
     articles = _dedupe_articles(articles)
     mixed_articles = _interleave_articles_by_source(articles, limit)
     trimmed = [{k: v for k, v in article.items() if k != "published_ts"} for article in mixed_articles]
@@ -765,7 +749,7 @@ async def get_yahoo_news(symbol: Optional[str] = None, limit: int = 30) -> List[
     try:
         url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US" if symbol else "https://finance.yahoo.com/rss/topstories"
         parsed = await _parse_feed(url)
-        tasks = [_build_article(entry, "Yahoo Finance", translate=True) for entry in parsed.entries[:limit]]
+        tasks = [_build_article(entry, "Yahoo Finance", translate=False) for entry in parsed.entries[:limit]]
         articles = await asyncio.gather(*tasks)
         articles = [{k: v for k, v in article.items() if k != "published_ts"} for article in articles]
         _news_cache[cache_key] = articles
@@ -1052,68 +1036,69 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     if cache_key in _news_cache:
         return _news_cache[cache_key]
 
-    videos: List[Dict[str, Any]] = []
-    for channel in YOUTUBE_CHANNELS:
+    async def fetch_channel(channel: Dict[str, Any]) -> List[Dict[str, Any]]:
         feed_url = await _resolve_youtube_feed_url(channel)
         if not feed_url:
-            continue
+            return []
         try:
-            parsed = await _parse_feed(feed_url)
-            for entry in parsed.entries[: max(6, limit // max(len(YOUTUBE_CHANNELS), 1) + 2)]:
-                title = (entry.get("title") or "").strip()
-                summary = _clean_html(entry.get("summary") or entry.get("media_description") or "")[:500]
-                if not _is_market_video(title, summary, channel["source"]):
-                    continue
-                published_at, published_ts = _parse_published(entry)
-                link = entry.get("link", "")
-                video_id = _extract_youtube_id(link)
-                transcript = await _fetch_youtube_transcript(video_id)
-                content_basis = "transcript" if transcript else "none"
-                content_text = transcript
-                if not content_text:
-                    content_text = await _fetch_gemini_youtube_summary(link, title)
-                    content_basis = "video_ai" if content_text else "none"
-                content_excerpt = _pick_focus_sentences(content_text or "", limit=3)
-                analysis_text = _compact_text(f"{title} {content_text or ''}", max_len=3000)
-                detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
-                tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
-                video = {
-                    "id": entry.get("yt_videoid", video_id or entry.get("id", link)),
-                    "title": title,
-                    "title_ko": title,
-                    "summary": summary,
-                    "summary_ko": summary,
-                    "url": link,
-                    "published_at": published_at,
-                    "published_ts": published_ts,
-                    "source": channel["source"],
-                    "channel": channel["source"],
-                    "image": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
-                    "video_url": link,
-                    "video_thumbnail": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
-                    "media_type": "video",
-                    "tickers": _extract_tickers(analysis_text),
-                    "sentiment": _sentiment_score(analysis_text),
-                    "importance": "high" if any(k in analysis_text.lower() for k in ["속보", "긴급", "fed", "금리", "실적", "반도체"]) else "normal",
-                    "data_source": "youtube_rss",
-                    "topic": detected_topic,
-                    "topic_label": TOPIC_LABELS.get(detected_topic, detected_topic),
-                    "tier": channel.get("tier", "a"),
-                    "tier_label": TIER_LABELS.get(channel.get("tier", "a"), channel.get("tier", "a")),
-                    "layer": channel.get("layer", "analysis"),
-                    "layer_label": LAYER_LABELS.get(channel.get("layer", "analysis"), channel.get("layer", "analysis")),
-                    "region": channel.get("region", "global"),
-                    "region_label": REGION_LABELS.get(channel.get("region", "global"), channel.get("region", "global")),
-                    "source_role": channel.get("role", "전문가 해설"),
-                    "tags": tags,
-                    "transcript_available": bool(content_excerpt or content_text),
-                    "content_basis": content_basis,
-                    "transcript_excerpt": " ".join(content_excerpt) if content_excerpt else content_text,
-                    "insight": _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
-                }
-                videos.append(video)
+            parsed = await _parse_feed(feed_url, timeout=4.0)
         except Exception:
-            continue
+            return []
+
+        channel_videos: List[Dict[str, Any]] = []
+        for entry in parsed.entries[: max(6, limit // max(len(YOUTUBE_CHANNELS), 1) + 2)]:
+            title = (entry.get("title") or "").strip()
+            summary = _clean_html(entry.get("summary") or entry.get("media_description") or "")[:500]
+            if not _is_market_video(title, summary, channel["source"]):
+                continue
+            published_at, published_ts = _parse_published(entry)
+            link = entry.get("link", "")
+            video_id = _extract_youtube_id(link)
+            transcript_cache_key = f"yt-transcript:{video_id}" if video_id else ""
+            content_text = _youtube_transcript_cache.get(transcript_cache_key) if transcript_cache_key else None
+            content_basis = "transcript" if content_text else "none"
+            content_excerpt = _pick_focus_sentences(content_text or summary, limit=3)
+            analysis_text = _compact_text(f"{title} {summary} {content_text or ''}", max_len=3000)
+            detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
+            tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
+            channel_videos.append({
+                "id": entry.get("yt_videoid", video_id or entry.get("id", link)),
+                "title": title,
+                "title_ko": title,
+                "summary": summary,
+                "summary_ko": summary,
+                "url": link,
+                "published_at": published_at,
+                "published_ts": published_ts,
+                "source": channel["source"],
+                "channel": channel["source"],
+                "image": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
+                "video_url": link,
+                "video_thumbnail": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
+                "media_type": "video",
+                "tickers": _extract_tickers(analysis_text),
+                "sentiment": _sentiment_score(analysis_text),
+                "importance": "high" if any(k in analysis_text.lower() for k in ["속보", "긴급", "fed", "금리", "실적", "반도체"]) else "normal",
+                "data_source": "youtube_rss",
+                "topic": detected_topic,
+                "topic_label": TOPIC_LABELS.get(detected_topic, detected_topic),
+                "tier": channel.get("tier", "a"),
+                "tier_label": TIER_LABELS.get(channel.get("tier", "a"), channel.get("tier", "a")),
+                "layer": channel.get("layer", "analysis"),
+                "layer_label": LAYER_LABELS.get(channel.get("layer", "analysis"), channel.get("layer", "analysis")),
+                "region": channel.get("region", "global"),
+                "region_label": REGION_LABELS.get(channel.get("region", "global"), channel.get("region", "global")),
+                "source_role": channel.get("role", "전문가 해설"),
+                "tags": tags,
+                "transcript_available": bool(content_text),
+                "content_basis": content_basis,
+                "transcript_excerpt": " ".join(content_excerpt) if content_excerpt else content_text,
+                "insight": _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
+            })
+        return channel_videos
+
+    channel_results = await asyncio.gather(*(fetch_channel(channel) for channel in YOUTUBE_CHANNELS))
+    videos = [video for channel_videos in channel_results for video in channel_videos]
 
     videos = _dedupe_articles(videos)
     videos.sort(key=lambda item: item.get("published_ts", 0), reverse=True)

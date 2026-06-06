@@ -14,6 +14,26 @@ RULE_BASED_TEMPLATES = {
     "neutral": "현재 방향성이 불명확합니다. 주요 지지/저항 레벨을 관찰하며 대응하세요.",
 }
 
+GEMINI_FALLBACK_MODELS = ("gemini-2.0-flash", "gemini-1.5-flash")
+
+
+async def _generate_gemini_text(prompt: str, api_key: str) -> Dict[str, str]:
+    import google.generativeai as genai
+
+    genai.configure(api_key=api_key)
+    last_error = ""
+    for model_name in dict.fromkeys([settings.GEMINI_MODEL, *GEMINI_FALLBACK_MODELS]):
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = await asyncio.to_thread(model.generate_content, prompt)
+            text = getattr(response, "text", "") or ""
+            if text.strip():
+                return {"text": text, "model": model_name}
+            last_error = f"{model_name}: empty response"
+        except Exception as exc:
+            last_error = f"{model_name}: {exc}"
+    raise RuntimeError(last_error or "Gemini response failed")
+
 
 def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
     if not quote or quote.get("data_status") == "error":
@@ -89,10 +109,6 @@ async def analyze_stock(
         }
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-
         quote_str = ""
         if quote:
             cur = quote.get("currency") or "USD"
@@ -122,11 +138,11 @@ P/E: {quote.get('pe_ratio', 'N/A')}
 
 ⚠️ 이 분석은 참고용이며 투자 권유가 아닙니다."""
 
-        response = await asyncio.to_thread(model.generate_content, prompt)
+        response = await _generate_gemini_text(prompt, api_key)
         return {
-            "analysis": response.text,
+            "analysis": response["text"],
             "method": "gemini",
-            "model": "gemini-1.5-flash",
+            "model": response["model"],
         }
     except Exception as e:
         return {
@@ -150,14 +166,10 @@ async def chat_with_ai(
         }
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-
         system = "당신은 미국 주식 투자 전문가 AI입니다. 한국어로 친절하고 정확하게 답변해주세요. 투자 권유는 하지 않으며, 교육적 정보만 제공합니다."
         full_prompt = f"{system}\n\n사용자: {message}"
 
-        response = await asyncio.to_thread(model.generate_content, full_prompt)
-        return {"reply": response.text, "method": "gemini"}
+        response = await _generate_gemini_text(full_prompt, api_key)
+        return {"reply": response["text"], "method": "gemini", "model": response["model"]}
     except Exception as e:
         return {"reply": f"AI 응답 오류: {str(e)}", "method": "error"}

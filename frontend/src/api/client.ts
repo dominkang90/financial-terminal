@@ -69,6 +69,9 @@ export const newsApi = {
 
 // ── AI ────────────────────────────────────────────────────
 export const aiApi = {
+  status: (): Promise<{ gemini_configured: boolean }> =>
+    api.get("/ai/status").then((r) => r.data),
+
   analyze: (symbol: string, apiKey?: string) =>
     api.post("/ai/analyze", { symbol, api_key: apiKey }).then((r) => r.data),
 

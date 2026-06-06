@@ -10,13 +10,19 @@ interface Message {
   method?: string;
 }
 
+function buildWelcomeMessage(symbol: string, hasGemini: boolean) {
+  return `안녕하세요! 저는 FinTerminal AI 어시스턴트입니다.\n\n현재 선택된 종목: **${symbol}**\n\n종목 분석, 뉴스 요약, 투자 개념 설명 등을 도와드립니다. 무엇이든 물어보세요!\n\n${hasGemini ? "✅ Gemini API 연결됨" : "⚠️ Gemini API 키가 없어 규칙 기반 분석을 사용합니다. 설정에서 키를 입력하면 AI 분석이 가능합니다."}`;
+}
+
 export function AIAssistant() {
   const { activeSymbol } = useMarketStore();
   const { geminiApiKey } = useSettingsStore();
+  const [serverGeminiConfigured, setServerGeminiConfigured] = useState(false);
+  const hasGemini = Boolean(geminiApiKey || serverGeminiConfigured);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `안녕하세요! 저는 FinTerminal AI 어시스턴트입니다.\n\n현재 선택된 종목: **${activeSymbol}**\n\n종목 분석, 뉴스 요약, 투자 개념 설명 등을 도와드립니다. 무엇이든 물어보세요!\n\n${!geminiApiKey ? "⚠️ Gemini API 키가 없어 규칙 기반 분석을 사용합니다. 설정에서 키를 입력하면 AI 분석이 가능합니다." : "✅ Gemini API 연결됨"}`,
+      content: buildWelcomeMessage(activeSymbol, Boolean(geminiApiKey)),
       method: "system",
     },
   ]);
@@ -28,6 +34,21 @@ export function AIAssistant() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    aiApi.status()
+      .then((status) => setServerGeminiConfigured(Boolean(status.gemini_configured)))
+      .catch(() => setServerGeminiConfigured(false));
+  }, []);
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (!prev[0] || prev[0].method !== "system") return prev;
+      const next = [...prev];
+      next[0] = { ...next[0], content: buildWelcomeMessage(activeSymbol, hasGemini) };
+      return next;
+    });
+  }, [activeSymbol, hasGemini]);
 
   const send = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -77,7 +98,7 @@ export function AIAssistant() {
         <Bot size={13} className="text-terminal-accent" />
         <span className="text-xs font-mono text-terminal-text-secondary">AI 어시스턴트</span>
         <span className="text-2xs font-mono text-terminal-blue bg-terminal-blue/10 px-1 rounded">
-          {geminiApiKey ? "Gemini" : "규칙 기반"}
+          {hasGemini ? "Gemini" : "규칙 기반"}
         </span>
         <div className="flex-1" />
         <button

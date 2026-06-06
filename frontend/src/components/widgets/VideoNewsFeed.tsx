@@ -83,12 +83,10 @@ function splitBullets(...inputs: Array<string | undefined | null>) {
 }
 
 function buildActionBullets(article: NewsArticle) {
-  if (!article.transcript_available) {
-    return ["이 영상은 아직 내용을 확보하지 못했습니다.", "영상 열기 버튼으로 원문 내용을 직접 확인해 주세요."];
-  }
-
   const bullets = splitBullets(article.transcript_excerpt, article.insight);
-  return bullets.length > 0 ? bullets.slice(0, 3) : ["영상 내용은 가져왔지만 아직 핵심 문장을 뽑는 중입니다."];
+  if (bullets.length > 0) return bullets.slice(0, 3);
+  if (article.summary_ko || article.summary) return splitBullets(article.summary_ko, article.summary).slice(0, 3);
+  return ["제목 기준으로 시장 관련성을 확인했습니다.", "영상 열기 버튼으로 원문 내용을 함께 확인해 주세요."];
 }
 
 function summaryCards(videos: NewsArticle[], marketScore: number) {
@@ -352,7 +350,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                 </CardHeader>
                 <CardContent className="space-y-4 text-[16px] leading-7 text-white/82">
                   <p>{article.insight || overallInsight || "분석 요약을 준비 중입니다."}</p>
-                  {article.transcript_available ? (
+                  {article.transcript_available || article.content_basis === "video_ai" ? (
                     bullets.length > 0 ? (
                       <ul className="space-y-3 text-[15px] leading-7 text-white/72">
                         {bullets.map((bullet) => (
@@ -369,7 +367,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     )
                   ) : (
                     <div className="rounded-lg border border-[#242424] bg-[#101010] p-3 text-sm leading-6 text-[#8d8d8d]">
-                      이 영상은 자막이나 영상 요약을 가져오지 못해서, 영상 내용 기반 요약을 숨겼습니다.
+                      이 영상은 자막/영상 AI 요약이 없어 제목·설명 기준 인사이트를 표시합니다. 원문 영상과 함께 확인해 주세요.
                     </div>
                   )}
                 </CardContent>
@@ -457,7 +455,7 @@ function InsightDashboard({
   onSelect: (article: NewsArticle) => void;
 }) {
   const active = selected || videos[0] || null;
-  const contentReady = videos.filter((item) => item.transcript_available).length;
+  const contentReady = videos.filter((item) => item.transcript_available || item.content_basis === "video_ai").length;
   const bullish = videos.filter((item) => item.sentiment === "positive").length;
   const bearish = videos.filter((item) => item.sentiment === "negative").length;
   const neutral = Math.max(videos.length - bullish - bearish, 0);
@@ -517,7 +515,7 @@ function InsightDashboard({
               <div className="h-full rounded-full bg-gradient-to-r from-[#ff6600] to-[#FFD27D]" style={{ width: `${coveragePct}%` }} />
             </div>
             <p className="mt-2 text-[11px] leading-5 text-[#666]">
-              자막/영상 요약을 확보한 영상은 실제 내용 기반으로 요약하고, 실패한 영상은 제목 기준 안내만 표시합니다.
+              자막/영상 요약을 확보한 영상은 실제 내용 기반으로, 나머지는 제목·설명 기준으로 구분해 표시합니다.
             </p>
           </div>
         </div>
@@ -550,8 +548,8 @@ function InsightDashboard({
                 <div className="line-clamp-2 text-sm font-medium leading-5 text-white">{active.title_ko || active.title}</div>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge className="border-[#333] bg-[#111] text-[#aaa]">{active.source}</Badge>
-                  <Badge className={cn(active.transcript_available ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100")}>
-                    {active.transcript_available ? "내용 기반" : "제목 기준"}
+                  <Badge className={cn(active.transcript_available || active.content_basis === "video_ai" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100")}>
+                    {active.transcript_available ? "자막 기반" : active.content_basis === "video_ai" ? "영상 AI 기반" : "제목 기준"}
                   </Badge>
                 </div>
                 <ul className="space-y-1.5 text-[12px] leading-5 text-[#c8c8c8]">

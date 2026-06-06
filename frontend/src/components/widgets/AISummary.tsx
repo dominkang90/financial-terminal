@@ -9,6 +9,7 @@ export function AISummary() {
   const { geminiApiKey } = useSettingsStore();
   const [summary, setSummary] = useState<string>("");
   const [method, setMethod] = useState<string>("");
+  const [serverGeminiConfigured, setServerGeminiConfigured] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchSummary = async () => {
@@ -26,13 +27,19 @@ export function AISummary() {
   };
 
   useEffect(() => {
+    aiApi.status()
+      .then((status) => setServerGeminiConfigured(Boolean(status.gemini_configured)))
+      .catch(() => setServerGeminiConfigured(false));
+  }, []);
+
+  useEffect(() => {
     setSummary("");
     fetchSummary();
   }, [activeSymbol]);
 
   const methodLabel =
     method === "gemini" ? "Gemini" :
-    method === "rule_based" || method === "rule_based_fallback" ? "규칙 기반" :
+    method === "rule_based" || method === "rule_based_fallback" ? (serverGeminiConfigured || geminiApiKey ? "규칙 기반 폴백" : "규칙 기반") :
     method === "error" ? "오류" : "";
 
   return (

@@ -449,7 +449,8 @@ async def _fetch_gemini_youtube_summary(video_url: str, title: str) -> Optional[
     try:
         async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:
             response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}",
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}",
                 json=payload,
             )
             response.raise_for_status()
@@ -814,9 +815,16 @@ async def get_finnhub_news(symbol: Optional[str] = None, limit: int = 30) -> Lis
 def _detect_topic(text: str, topic_hint: Optional[str] = None) -> str:
     lowered = (text or "").lower()
     for topic, keywords in TOPIC_KEYWORDS.items():
-        if any(keyword.lower() in lowered for keyword in keywords):
+        if any(_keyword_in_text(keyword, lowered) for keyword in keywords):
             return topic
     return topic_hint or "macro"
+
+
+def _keyword_in_text(keyword: str, lowered_text: str) -> bool:
+    lowered_keyword = keyword.lower()
+    if lowered_keyword.isascii() and re.fullmatch(r"[a-z0-9]+", lowered_keyword):
+        return bool(re.search(rf"(?<![a-z0-9]){re.escape(lowered_keyword)}(?![a-z0-9])", lowered_text))
+    return lowered_keyword in lowered_text
 
 
 def _score_market_relevance(text: str, source: str) -> int:
@@ -825,18 +833,18 @@ def _score_market_relevance(text: str, source: str) -> int:
 
     for weight, keywords in MARKET_RELEVANCE_KEYWORDS.items():
         for keyword in keywords:
-            if keyword.lower() in lowered:
+            if _keyword_in_text(keyword, lowered):
                 score += weight
 
     for weight, keywords in MARKET_EXCLUSION_KEYWORDS.items():
         for keyword in keywords:
-            if keyword.lower() in lowered:
+            if _keyword_in_text(keyword, lowered):
                 score -= weight
 
     if source in FINANCE_FOCUSED_SOURCES:
         score += 3
 
-    if any(keyword.lower() in lowered for keyword in TOPIC_KEYWORDS["macro"]):
+    if any(_keyword_in_text(keyword, lowered) for keyword in TOPIC_KEYWORDS["macro"]):
         score += 1
 
     return score
@@ -845,7 +853,7 @@ def _score_market_relevance(text: str, source: str) -> int:
 
 def _has_title_market_signal(title: str) -> bool:
     lowered = (title or "").lower()
-    return any(keyword.lower() in lowered for keyword in TITLE_MARKET_KEYWORDS)
+    return any(_keyword_in_text(keyword, lowered) for keyword in TITLE_MARKET_KEYWORDS)
 
 
 
@@ -854,7 +862,7 @@ def _count_market_keyword_hits(text: str) -> int:
     hits = 0
     for keywords in MARKET_RELEVANCE_KEYWORDS.values():
         for keyword in keywords:
-            if keyword.lower() in lowered:
+            if _keyword_in_text(keyword, lowered):
                 hits += 1
     return hits
 
@@ -882,7 +890,7 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
         "금리", "환율", "연준", "코스피", "코스닥", "삼성전자", "SK하이닉스", "엔비디아",
         "테슬라", "2차전지", "반도체", "AI", "실적", "빅테크", "배터리", "정책", "관세",
     ]:
-        if candidate.lower() in lowered:
+        if _keyword_in_text(candidate, lowered):
             tags.append(candidate)
     tags.append(TOPIC_LABELS.get(topic, topic))
     return list(dict.fromkeys(tag for tag in tags if tag))[:6]
@@ -890,7 +898,7 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
 
 def _build_video_insight(title: str, summary: str, content_text: Optional[str], source: str, topic: str, tags: List[str], content_basis: str = "none") -> str:
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
-    analysis_source = (content_text or summary or title or "").strip()
+    analysis_source = (content_text or (title if content_basis == "none" else summary) or title or "").strip()
     focus_sentences = _pick_focus_sentences(analysis_source, limit=2)
     primary = focus_sentences[0] if focus_sentences else title.strip()
     secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
@@ -1057,6 +1065,20 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
             transcript_cache_key = f"yt-transcript:{video_id}" if video_id else ""
             content_text = _youtube_transcript_cache.get(transcript_cache_key) if transcript_cache_key else None
             content_basis = "transcript" if content_text else "none"
+            if not content_text and video_id:
+                try:
+                    content_text = await asyncio.wait_for(_fetch_youtube_transcript(video_id), timeout=6.0)
+                    content_basis = "transcript" if content_text else "none"
+                except Exception:
+                    content_text = None
+                    content_basis = "none"
+            if not content_text and settings.GEMINI_API_KEY and link:
+                try:
+                    content_text = await asyncio.wait_for(_fetch_gemini_youtube_summary(link, title), timeout=12.0)
+                    content_basis = "video_ai" if content_text else "none"
+                except Exception:
+                    content_text = None
+                    content_basis = "none"
             content_excerpt = _pick_focus_sentences(content_text or summary, limit=3)
             analysis_text = _compact_text(f"{title} {summary} {content_text or ''}", max_len=3000)
             detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))

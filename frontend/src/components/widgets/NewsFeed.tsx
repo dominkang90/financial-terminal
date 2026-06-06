@@ -218,6 +218,7 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "positive" | "negative" | "hot" | "video">("all");
   const [sectorFilter, setSectorFilter] = useState<SectorFilterId>("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -240,16 +241,19 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
 
   useEffect(() => {
     setSectorFilter("all");
+    setSourceFilter("all");
   }, [symbolFilter, activeSymbol, market]);
 
+  const sourceOptions = Array.from(new Set(articles.map((article) => article.source).filter(Boolean))).sort();
 
   const filtered = articles.filter((a) => {
     const sectorMatched = articleMatchesSector(a, sectorFilter);
-    if (filter === "positive") return a.sentiment === "positive" && sectorMatched;
-    if (filter === "negative") return a.sentiment === "negative" && sectorMatched;
-    if (filter === "hot") return a.importance === "high" && sectorMatched;
-    if (filter === "video") return a.media_type === "video" && sectorMatched;
-    return sectorMatched;
+    const sourceMatched = sourceFilter === "all" || a.source === sourceFilter;
+    if (filter === "positive") return a.sentiment === "positive" && sectorMatched && sourceMatched;
+    if (filter === "negative") return a.sentiment === "negative" && sectorMatched && sourceMatched;
+    if (filter === "hot") return a.importance === "high" && sectorMatched && sourceMatched;
+    if (filter === "video") return a.media_type === "video" && sectorMatched && sourceMatched;
+    return sectorMatched && sourceMatched;
   });
 
   const videoCount = articles.filter((a) => a.media_type === "video").length;
@@ -299,7 +303,7 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
 
       {(!isLoading || articles.length > 0) && (
         <div className="flex-1 overflow-y-auto p-3">
-          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
             <span className="text-2xs font-mono text-[#555] mr-1">분야 필터</span>
             {SECTOR_FILTERS.map((sector) => {
               const count = articles.filter((article) => articleMatchesSector(article, sector.id)).length;
@@ -311,7 +315,7 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
                   className={`px-2 py-1 rounded text-2xs font-mono border ${
                     sectorFilter === sector.id
                       ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
-                      : "border-[#222] text-[#666] hover:text-[#999]"
+                      : "border-[#222] text-[#777] hover:text-[#bbb]"
                   }`}
                 >
                   {sector.label} {count > 0 ? count : ""}
@@ -319,6 +323,40 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
               );
             })}
           </div>
+
+          {sourceOptions.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-3 border-b border-[#171717] pb-3">
+              <span className="text-2xs font-mono text-[#555] mr-1">매체 필터</span>
+              <button
+                type="button"
+                onClick={() => setSourceFilter("all")}
+                className={`px-2 py-1 rounded text-2xs font-mono border ${
+                  sourceFilter === "all"
+                    ? "bg-[#3399ff]/10 text-[#66b3ff] border-[#3399ff]/40"
+                    : "border-[#222] text-[#777] hover:text-[#bbb]"
+                }`}
+              >
+                전체 {articles.length}
+              </button>
+              {sourceOptions.map((source) => {
+                const count = articles.filter((article) => article.source === source).length;
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    onClick={() => setSourceFilter(source)}
+                    className={`px-2 py-1 rounded text-2xs font-mono border ${
+                      sourceFilter === source
+                        ? "bg-[#3399ff]/10 text-[#66b3ff] border-[#3399ff]/40"
+                        : "border-[#222] text-[#777] hover:text-[#bbb]"
+                    }`}
+                  >
+                    {source} {count}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map((article) => (

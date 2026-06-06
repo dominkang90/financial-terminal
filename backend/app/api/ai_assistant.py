@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import Optional
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.core.security import get_current_user_id
 from app.services.ai_service import analyze_stock, chat_with_ai
 from app.services.market_service import get_quote
@@ -19,6 +20,11 @@ class ChatRequest(BaseModel):
 class AnalyzeRequest(BaseModel):
     symbol: str
     api_key: Optional[str] = None
+
+
+@router.get("/status")
+async def status():
+    return {"gemini_configured": bool(settings.GEMINI_API_KEY)}
 
 
 @router.post("/analyze")

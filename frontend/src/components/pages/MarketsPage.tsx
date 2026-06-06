@@ -9,6 +9,7 @@ import { NewsFeed } from "@/components/widgets/NewsFeed";
 export function MarketsPage() {
   const { fetchChart, activeSymbol, chartPeriod, chartInterval } = useMarketStore();
   const [chartExpanded, setChartExpanded] = useState(false);
+  const [marketPulseCollapsed, setMarketPulseCollapsed] = useState(false);
 
   useEffect(() => {
     fetchChart(activeSymbol, chartPeriod, chartInterval);
@@ -17,8 +18,8 @@ export function MarketsPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* 왼쪽 시장 요약 패널 - 관심종목은 앱 전체 공통 사이드바로 이동 */}
-      <div className="hidden md:flex w-52 flex-shrink-0 flex-col border-r border-terminal-border overflow-hidden">
-        <MarketPulse />
+      <div className={`hidden md:flex flex-shrink-0 flex-col border-r border-terminal-border overflow-hidden transition-all duration-200 ${marketPulseCollapsed ? "w-12" : "w-52"}`}>
+        <MarketPulse onCollapsedChange={setMarketPulseCollapsed} />
       </div>
 
       {/* 중앙 패널: 차트를 고정하지 않고 뉴스까지 세로 스크롤 */}

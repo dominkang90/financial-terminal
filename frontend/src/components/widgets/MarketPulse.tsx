@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Settings } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
 
@@ -13,15 +14,43 @@ const SECTOR_ETFS: Record<string, string> = {
   "소재 (XLB)": "XLB",
 };
 
-export function MarketPulse() {
+const STORAGE_KEY = "market-pulse-order";
+const DEFAULT_SECTION_ORDER = ["korea", "sectors", "commodities", "rates"] as const;
+type SectionId = typeof DEFAULT_SECTION_ORDER[number];
+
+function loadSectionOrder(): SectionId[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    if (Array.isArray(saved)) {
+      const valid = saved.filter((id): id is SectionId => DEFAULT_SECTION_ORDER.includes(id));
+      const missing = DEFAULT_SECTION_ORDER.filter((id) => !valid.includes(id));
+      return [...valid, ...missing];
+    }
+  } catch {
+    // ignore invalid localStorage state
+  }
+  return [...DEFAULT_SECTION_ORDER];
+}
+
+export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collapsed: boolean) => void }) {
   const {
     quotes, fetchCommodities, fetchRates, commodities, rates, addToWatchlist,
     indices, fetchIndices, forex, fetchForex,
   } = useMarketStore();
   const { fetchWatchlistQuotes } = useMarketStore();
+  const [collapsed, setCollapsed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sectionOrder, setSectionOrder] = useState<SectionId[]>(() => loadSectionOrder());
 
   useEffect(() => {
-    // 섹터 ETF를 watchlist에 추가해서 quotes에 포함시킴
+    onCollapsedChange?.(collapsed);
+  }, [collapsed, onCollapsedChange]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sectionOrder));
+  }, [sectionOrder]);
+
+  useEffect(() => {
     Object.values(SECTOR_ETFS).forEach(sym => addToWatchlist(sym));
     fetchCommodities();
     fetchRates();
@@ -38,61 +67,127 @@ export function MarketPulse() {
     return () => clearInterval(id);
   }, [fetchCommodities, fetchRates, fetchIndices, fetchForex, fetchWatchlistQuotes, addToWatchlist]);
 
+  const sections = useMemo<Record<SectionId, { title: string; rows: ReactNode }>>(() => ({
+    korea: {
+      title: "한국 시장",
+      rows: Object.entries({
+        "코스피 (KOSPI)": indices["KOSPI"],
+        "코스닥 (KOSDAQ)": indices["KOSDAQ"],
+        "원/달러": forex["USD/KRW"],
+      }).map(([label, q]) => <SectorRow key={label} label={label} q={q} pricePrefix="" />),
+    },
+    sectors: {
+      title: "섹터 모멘텀",
+      rows: Object.entries(SECTOR_ETFS).map(([label, symbol]) => (
+        <SectorRow key={symbol} label={label} q={quotes[symbol]} />
+      )),
+    },
+    commodities: {
+      title: "원자재",
+      rows: Object.entries({
+        "금 (Gold)": commodities["GOLD"],
+        "은 (Silver)": commodities["SILVER"],
+        "WTI 원유": commodities["OIL_WTI"],
+        "천연가스": commodities["NATGAS"],
+        "구리": commodities["COPPER"],
+      }).map(([label, q]) => <SectorRow key={label} label={label} q={q} pricePrefix="" />),
+    },
+    rates: {
+      title: "미국 금리",
+      rows: Object.entries({
+        "미국 10년물": rates["US10Y"],
+        "미국 2년물": rates["US02Y"],
+        "미국 30년물": rates["US30Y"],
+      }).map(([label, q]) => <SectorRow key={label} label={label} q={q} pricePrefix="" priceSuffix="%" />),
+    },
+  }), [commodities, forex, indices, quotes, rates]);
+
+  const moveSection = (sectionId: SectionId, direction: -1 | 1) => {
+    setSectionOrder((prev) => {
+      const next = [...prev];
+      const index = next.indexOf(sectionId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  if (collapsed) {
+    return (
+      <div className="flex h-full flex-col items-center gap-3 bg-[#0b0b0b] py-3">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="rounded border border-terminal-border p-1 text-terminal-text-secondary hover:text-terminal-text-primary"
+          title="시장 모멘텀 열기"
+        >
+          <ChevronRight size={14} />
+        </button>
+        <div className="text-[10px] font-mono text-terminal-text-dim [writing-mode:vertical-rl]">시장 모멘텀</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* 한국 시장 */}
-      <Section title="한국 시장">
-        {Object.entries({
-          "코스피 (KOSPI)": indices["KOSPI"],
-          "코스닥 (KOSDAQ)": indices["KOSDAQ"],
-          "원/달러": forex["USD/KRW"],
-        }).map(([label, q]) => (
-          <SectorRow key={label} label={label} q={q} pricePrefix="" />
-        ))}
-      </Section>
+    <div className="flex h-full flex-col overflow-hidden bg-[#0b0b0b]">
+      <div className="flex items-center justify-between border-b border-terminal-border px-2 py-1.5">
+        <span className="text-2xs font-mono text-terminal-text-dim">시장 모멘텀 패널</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((prev) => !prev)}
+            className={`rounded border p-1 ${settingsOpen ? "border-[#ff6600]/50 text-[#ff8833]" : "border-terminal-border text-terminal-text-secondary hover:text-terminal-text-primary"}`}
+            title="시장 모멘텀 순서 설정"
+          >
+            <Settings size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="rounded border border-terminal-border p-1 text-terminal-text-secondary hover:text-terminal-text-primary"
+            title="시장 모멘텀 닫기"
+          >
+            <ChevronLeft size={12} />
+          </button>
+        </div>
+      </div>
 
-      {/* 섹터 ETF */}
-      <Section title="섹터 모멘텀">
-        {Object.entries(SECTOR_ETFS).map(([label, symbol]) => {
-          const q = quotes[symbol];
-          return (
-            <SectorRow key={symbol} label={label} q={q} />
-          );
-        })}
-      </Section>
+      {settingsOpen && (
+        <div className="border-b border-terminal-border bg-[#101010] px-2 py-2">
+          <div className="mb-1 text-[10px] font-mono text-[#777]">표시 순서</div>
+          <div className="space-y-1">
+            {sectionOrder.map((sectionId, index) => (
+              <div key={sectionId} className="flex items-center gap-1 rounded border border-[#222] px-1.5 py-1 text-[10px] font-mono text-[#aaa]">
+                <span className="min-w-0 flex-1 truncate">{sections[sectionId].title}</span>
+                <button type="button" onClick={() => moveSection(sectionId, -1)} disabled={index === 0} className="text-[#666] hover:text-[#ddd] disabled:opacity-25">
+                  <ChevronUp size={11} />
+                </button>
+                <button type="button" onClick={() => moveSection(sectionId, 1)} disabled={index === sectionOrder.length - 1} className="text-[#666] hover:text-[#ddd] disabled:opacity-25">
+                  <ChevronDown size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* 원자재 */}
-      <Section title="원자재">
-        {Object.entries({
-          "금 (Gold)": commodities["GOLD"],
-          "은 (Silver)": commodities["SILVER"],
-          "WTI 원유": commodities["OIL_WTI"],
-          "천연가스": commodities["NATGAS"],
-          "구리": commodities["COPPER"],
-        }).map(([label, q]) => (
-          <SectorRow key={label} label={label} q={q} pricePrefix="" />
+      <div className="flex-1 overflow-y-auto">
+        {sectionOrder.map((sectionId) => (
+          <Section key={sectionId} title={sections[sectionId].title}>
+            {sections[sectionId].rows}
+          </Section>
         ))}
-      </Section>
-
-      {/* 금리 */}
-      <Section title="미국 금리">
-        {Object.entries({
-          "미국 10년물": rates["US10Y"],
-          "미국 2년물": rates["US02Y"],
-          "미국 30년물": rates["US30Y"],
-        }).map(([label, q]) => (
-          <SectorRow key={label} label={label} q={q} pricePrefix="" priceSuffix="%" />
-        ))}
-      </Section>
+      </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-b border-terminal-border">
       <div className="px-3 py-1.5 bg-terminal-header">
-        <span className="block whitespace-normal break-keep pr-1 text-[11px] leading-4 font-mono text-terminal-text-dim">
+        <span className="block whitespace-normal break-keep pr-1 text-[11px] leading-4 font-mono text-[#a6a6a6]">
           {title}
         </span>
       </div>
@@ -114,9 +209,8 @@ function SectorRow({
 
   return (
     <div className="flex items-center gap-2 px-3 py-1 hover:bg-terminal-border group">
-      <span className="text-2xs font-mono text-terminal-text-secondary flex-1 truncate">{label}</span>
+      <span className="text-[11px] font-mono text-[#c9c9c9] flex-1 truncate" title={label}>{label}</span>
 
-      {/* 미니 바 차트 */}
       <div className="w-12 h-1.5 bg-terminal-border rounded-sm overflow-hidden">
         {q && q.data_status !== "error" && (
           <div
@@ -130,7 +224,7 @@ function SectorRow({
         {!q || q.data_status === "error" ? (
           <span className="text-2xs text-terminal-text-dim font-mono">—</span>
         ) : (
-          <span className="text-2xs font-mono text-terminal-text-primary">
+          <span className="text-2xs font-mono text-[#ededed]">
             {pricePrefix}{formatNumber(q.price, 2)}{priceSuffix}
           </span>
         )}

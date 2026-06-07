@@ -152,6 +152,53 @@ P/E: {quote.get('pe_ratio', 'N/A')}
         }
 
 
+RULE_CHAT_QA: List[tuple] = [
+    (["rsi", "상대강도"], "RSI(상대강도지수)는 0~100 사이 값으로, 70 이상이면 과매수(너무 많이 올랐을 수 있음), 30 이하면 과매도(너무 많이 떨어졌을 수 있음) 신호입니다. 추세 전환 시점을 파악할 때 많이 씁니다."),
+    (["per", "p/e", "pe 비율", "pe비율"], "PER(주가수익비율)은 주가를 주당순이익(EPS)으로 나눈 값입니다. PER이 낮을수록 이익 대비 저평가, 높을수록 고평가 또는 성장 기대가 반영된 것입니다. 같은 업종 내 비교가 중요합니다."),
+    (["pbr", "p/b"], "PBR(주가순자산비율)은 주가를 주당순자산(BPS)으로 나눈 값입니다. 1 미만이면 자산 대비 저평가로 볼 수 있습니다."),
+    (["52주", "52w"], "52주 고가/저가는 최근 1년간 최고가와 최저가입니다. 현재 주가가 52주 고가에 근접하면 강한 추세, 저가에 근접하면 지지 여부가 중요합니다."),
+    (["배당", "dividend"], "배당수익률은 연간 배당금을 현재 주가로 나눈 비율입니다. 배당주 투자는 안정적인 현금흐름이 장점이지만, 성장보다 배당을 선호하는 기업 특성을 고려해야 합니다."),
+    (["etf"], "ETF(상장지수펀드)는 특정 지수나 자산을 추종하는 펀드로 주식처럼 거래할 수 있습니다. SPY는 S&P500, QQQ는 나스닥100을 추종합니다. 분산투자 효과가 있습니다."),
+    (["시총", "시가총액", "market cap"], "시가총액은 주가 × 총 발행주식수로, 회사 전체 가치를 의미합니다. 대형주(Large-cap)는 시총 100억 달러 이상, 소형주(Small-cap)는 20억 달러 미만으로 구분합니다."),
+    (["환율", "달러", "원화"], "원/달러 환율이 오르면(원화 약세) 수출 기업에 유리하고 수입 비용은 증가합니다. 외국인 투자자 입장에서 환율 변동은 실제 수익률에 영향을 줍니다."),
+    (["금리", "연준", "fed"], "연준(Fed)이 금리를 올리면 주식 시장에 단기 부담이 됩니다. 고금리 환경에서는 채권 매력도가 높아지고, 성장주보다 가치주가 상대적으로 유리할 수 있습니다."),
+]
+
+
+def _rule_based_chat(message: str, context: Optional[Dict] = None) -> str:
+    lower = message.lower()
+    for keywords, answer in RULE_CHAT_QA:
+        if any(kw in lower for kw in keywords):
+            symbol = context.get("symbol", "") if context else ""
+            if symbol:
+                return f"{answer}\n\n현재 선택 종목: {symbol}"
+            return answer
+
+    symbol = context.get("symbol", "") if context else ""
+    quote = context.get("quote") if context else None
+    if symbol and quote and isinstance(quote, dict) and quote.get("data_status") != "error":
+        price = quote.get("price", 0)
+        change_pct = quote.get("change_pct", 0)
+        cur = quote.get("currency", "USD")
+        cs = "₩" if cur == "KRW" else "$"
+        dec = 0 if cur == "KRW" else 2
+        direction = "상승" if change_pct >= 0 else "하락"
+        return (
+            f"현재 {symbol} 종목 정보:\n"
+            f"• 현재가: {cs}{price:,.{dec}f}\n"
+            f"• 전일 대비: {'+' if change_pct >= 0 else ''}{change_pct:.2f}% ({direction})\n"
+            f"• 거래소: {quote.get('exchange', '—')}\n\n"
+            f"더 정확한 AI 분석을 원하시면 Gemini API 키를 설정에 입력해주세요."
+        )
+
+    return (
+        "안녕하세요! 투자 관련 질문을 도와드립니다.\n\n"
+        "현재 Gemini API 키가 없어 기본 답변만 제공됩니다.\n"
+        "RSI, PER, PBR, 52주 고가, 배당, ETF, 시가총액, 환율, 금리 등 투자 용어를 물어보시면 설명해드립니다.\n\n"
+        "더 정밀한 AI 분석을 원하시면 설정에서 Gemini API 키를 입력해주세요."
+    )
+
+
 async def chat_with_ai(
     message: str,
     context: Optional[Dict] = None,
@@ -161,8 +208,8 @@ async def chat_with_ai(
 
     if not api_key:
         return {
-            "reply": "AI 챗봇을 사용하려면 설정에서 Gemini API 키를 입력해주세요.",
-            "method": "no_api_key",
+            "reply": _rule_based_chat(message, context),
+            "method": "rule_based",
         }
 
     try:

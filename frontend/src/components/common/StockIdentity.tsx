@@ -18,72 +18,17 @@ interface IdentityMeta {
 }
 
 const KNOWN_STOCKS: Record<string, Omit<IdentityMeta, "symbol">> = {
-  "005930": {
-    name: "삼성전자",
-    logoUrl: "https://logo.clearbit.com/samsung.com",
-    flag: "🇰🇷",
-    accent: "from-[#1F3DFF] to-[#17248D]",
-  },
-  "005930.KS": {
-    name: "삼성전자",
-    logoUrl: "https://logo.clearbit.com/samsung.com",
-    flag: "🇰🇷",
-    accent: "from-[#1F3DFF] to-[#17248D]",
-  },
-  NVDA: {
-    name: "엔비디아",
-    logoUrl: "https://logo.clearbit.com/nvidia.com",
-    flag: "🇺🇸",
-    accent: "from-[#8CC63F] to-[#4B7F1B]",
-  },
-  AAPL: {
-    name: "애플",
-    logoUrl: "https://logo.clearbit.com/apple.com",
-    flag: "🇺🇸",
-    accent: "from-[#222] to-[#050505]",
-  },
-  MSFT: {
-    name: "마이크로소프트",
-    logoUrl: "https://logo.clearbit.com/microsoft.com",
-    flag: "🇺🇸",
-    accent: "from-[#00A4EF] to-[#0B3D91]",
-  },
-  GOOGL: {
-    name: "알파벳",
-    logoUrl: "https://logo.clearbit.com/abc.xyz",
-    flag: "🇺🇸",
-    accent: "from-[#4285F4] to-[#1A237E]",
-  },
-  TSLA: {
-    name: "테슬라",
-    logoUrl: "https://logo.clearbit.com/tesla.com",
-    flag: "🇺🇸",
-    accent: "from-[#E82127] to-[#7D1115]",
-  },
-  AMZN: {
-    name: "아마존",
-    logoUrl: "https://logo.clearbit.com/amazon.com",
-    flag: "🇺🇸",
-    accent: "from-[#FF9900] to-[#3B2410]",
-  },
-  META: {
-    name: "메타",
-    logoUrl: "https://logo.clearbit.com/meta.com",
-    flag: "🇺🇸",
-    accent: "from-[#0866FF] to-[#102A6B]",
-  },
-  SPY: {
-    name: "S&P 500 ETF",
-    logoUrl: "https://logo.clearbit.com/ssga.com",
-    flag: "🇺🇸",
-    accent: "from-[#315C99] to-[#101B2E]",
-  },
-  QQQ: {
-    name: "나스닥 100 ETF",
-    logoUrl: "https://logo.clearbit.com/invesco.com",
-    flag: "🇺🇸",
-    accent: "from-[#6D5DFB] to-[#15103D]",
-  },
+  "005930": { name: "삼성전자", flag: "🇰🇷", accent: "from-[#1F3DFF] to-[#17248D]" },
+  "005930.KS": { name: "삼성전자", flag: "🇰🇷", accent: "from-[#1F3DFF] to-[#17248D]" },
+  NVDA: { name: "엔비디아", flag: "🇺🇸", accent: "from-[#8CC63F] to-[#4B7F1B]" },
+  AAPL: { name: "애플", flag: "🇺🇸", accent: "from-[#555] to-[#111]" },
+  MSFT: { name: "마이크로소프트", flag: "🇺🇸", accent: "from-[#00A4EF] to-[#0B3D91]" },
+  GOOGL: { name: "알파벳", flag: "🇺🇸", accent: "from-[#4285F4] to-[#1A237E]" },
+  TSLA: { name: "테슬라", flag: "🇺🇸", accent: "from-[#E82127] to-[#7D1115]" },
+  AMZN: { name: "아마존", flag: "🇺🇸", accent: "from-[#FF9900] to-[#3B2410]" },
+  META: { name: "메타", flag: "🇺🇸", accent: "from-[#0866FF] to-[#102A6B]" },
+  SPY: { name: "S&P 500 ETF", flag: "🇺🇸", accent: "from-[#315C99] to-[#101B2E]" },
+  QQQ: { name: "나스닥 100 ETF", flag: "🇺🇸", accent: "from-[#6D5DFB] to-[#15103D]" },
 };
 
 function cleanSymbol(symbol: string) {
@@ -116,7 +61,7 @@ function resolveIdentity(symbol: string, quote?: Quote): IdentityMeta {
   return {
     symbol: stripped,
     name: quote?.name && quote.name !== normalized ? quote.name : known?.name || stripped,
-    logoUrl: quote?.logo_url || known?.logoUrl,
+    logoUrl: quote?.logo_url || undefined,
     flag: known?.flag || getFallbackFlag(symbol, quote),
     accent: known?.accent || "from-terminal-accent/70 to-[#111]",
   };
@@ -150,14 +95,14 @@ export function StockIdentity({ symbol, quote, compact = false, active = false, 
       </div>
 
       <div className="min-w-0 leading-tight">
-        <div className={`truncate font-semibold ${compact ? "text-xs" : "text-sm"} ${active ? "text-terminal-accent" : "text-terminal-text-primary"}`}>
-          {meta.name}
-        </div>
-        <div className="mt-1 flex min-w-0 items-center gap-1.5">
-          <span className="rounded bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] font-mono font-semibold text-[#5f6672]">
+        <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
+          <span className={`rounded border border-terminal-border bg-[#1a1a1a] px-1.5 py-0.5 font-mono font-semibold text-terminal-accent ${compact ? "text-[9px]" : "text-[10px]"}`}>
             {meta.symbol}
           </span>
           {subtitle && <span className="truncate text-[10px] font-mono text-terminal-text-dim">{subtitle}</span>}
+        </div>
+        <div className={`truncate font-mono ${compact ? "text-[11px]" : "text-xs"} ${active ? "text-terminal-accent" : "text-terminal-text-secondary"}`}>
+          {meta.name}
         </div>
       </div>
     </div>

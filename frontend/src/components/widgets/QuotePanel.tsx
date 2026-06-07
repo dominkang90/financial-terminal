@@ -92,52 +92,50 @@ export function QuotePanel() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-3 py-3 border-b border-terminal-border">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-mono text-terminal-text-secondary truncate max-w-32">{quote.name}</div>
-            <div className="text-xs font-bold font-mono text-terminal-accent">{quote.symbol}</div>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold font-mono text-terminal-accent">{quote.symbol}</div>
+            <div className="text-[10px] font-mono text-terminal-text-secondary truncate">{quote.name}</div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {canToggle && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setSymbolCurrencyOverride(quote.symbol, "KRW")}
-                  className={`px-2 py-0.5 rounded text-2xs font-mono border ${
-                    displayMode === "KRW"
-                      ? "bg-terminal-accent text-black border-terminal-accent"
-                      : "text-terminal-text-dim border-terminal-border hover:text-terminal-text-primary"
-                  }`}
-                >
-                  원화
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSymbolCurrencyOverride(quote.symbol, "NATIVE")}
-                  className={`px-2 py-0.5 rounded text-2xs font-mono border ${
-                    displayMode === "NATIVE"
-                      ? "bg-terminal-accent text-black border-terminal-accent"
-                      : "text-terminal-text-dim border-terminal-border hover:text-terminal-text-primary"
-                  }`}
-                >
-                  {nativeLabel}
-                </button>
-                {symbolOverride && symbolOverride !== defaultQuoteDisplay && (
-                  <button
-                    type="button"
-                    onClick={() => clearSymbolCurrencyOverride(quote.symbol)}
-                    className="px-1.5 py-0.5 rounded text-2xs font-mono border border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary inline-flex items-center gap-1"
-                    title="이 종목만 적용한 표시를 기본값으로 되돌리기"
-                  >
-                    <RotateCcw size={9} />
-                    기본
-                  </button>
-                )}
-              </>
-            )}
-            <DataStatusBadge status={quote.data_status} />
-          </div>
+          <DataStatusBadge status={quote.data_status} />
         </div>
+        {canToggle && (
+          <div className="flex items-center gap-1 mb-1">
+            <button
+              type="button"
+              onClick={() => setSymbolCurrencyOverride(quote.symbol, "KRW")}
+              className={`px-2 py-0.5 rounded text-2xs font-mono border ${
+                displayMode === "KRW"
+                  ? "bg-terminal-accent text-black border-terminal-accent"
+                  : "text-terminal-text-dim border-terminal-border hover:text-terminal-text-primary"
+              }`}
+            >
+              원화
+            </button>
+            <button
+              type="button"
+              onClick={() => setSymbolCurrencyOverride(quote.symbol, "NATIVE")}
+              className={`px-2 py-0.5 rounded text-2xs font-mono border ${
+                displayMode === "NATIVE"
+                  ? "bg-terminal-accent text-black border-terminal-accent"
+                  : "text-terminal-text-dim border-terminal-border hover:text-terminal-text-primary"
+              }`}
+            >
+              {nativeLabel}
+            </button>
+            {symbolOverride && symbolOverride !== defaultQuoteDisplay && (
+              <button
+                type="button"
+                onClick={() => clearSymbolCurrencyOverride(quote.symbol)}
+                className="px-1.5 py-0.5 rounded text-2xs font-mono border border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary inline-flex items-center gap-1"
+                title="기본값으로 되돌리기"
+              >
+                <RotateCcw size={9} />
+                기본
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-2">
           <span className="text-xl font-bold font-mono text-terminal-text-primary">{priceDisplay.primary}</span>

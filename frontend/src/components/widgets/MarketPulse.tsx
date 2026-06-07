@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Settings } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
+import { marketApi } from "@/api/client";
 import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
+import type { Quote } from "@/types";
 
 const SECTOR_ETFS: Record<string, string> = {
   "기술 (XLK)": "XLK",
@@ -34,13 +36,13 @@ function loadSectionOrder(): SectionId[] {
 
 export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collapsed: boolean) => void }) {
   const {
-    quotes, fetchCommodities, fetchRates, commodities, rates, addToWatchlist,
+    fetchCommodities, fetchRates, commodities, rates,
     indices, fetchIndices, forex, fetchForex,
   } = useMarketStore();
-  const { fetchWatchlistQuotes } = useMarketStore();
   const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(() => loadSectionOrder());
+  const [sectorQuotes, setSectorQuotes] = useState<Record<string, Quote>>({});
 
   useEffect(() => {
     onCollapsedChange?.(collapsed);
@@ -51,21 +53,27 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
   }, [sectionOrder]);
 
   useEffect(() => {
-    Object.values(SECTOR_ETFS).forEach(sym => addToWatchlist(sym));
+    const syms = Object.values(SECTOR_ETFS);
+    const fetchSectors = async () => {
+      try {
+        const data = await marketApi.batchQuotes(syms);
+        setSectorQuotes(data);
+      } catch {}
+    };
+    fetchSectors();
     fetchCommodities();
     fetchRates();
     fetchIndices();
     fetchForex();
-    fetchWatchlistQuotes();
     const id = setInterval(() => {
+      fetchSectors();
       fetchCommodities();
       fetchRates();
       fetchIndices();
       fetchForex();
-      fetchWatchlistQuotes();
     }, 60_000);
     return () => clearInterval(id);
-  }, [fetchCommodities, fetchRates, fetchIndices, fetchForex, fetchWatchlistQuotes, addToWatchlist]);
+  }, [fetchCommodities, fetchRates, fetchIndices, fetchForex]);
 
   const sections = useMemo<Record<SectionId, { title: string; rows: ReactNode }>>(() => ({
     korea: {
@@ -79,7 +87,7 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
     sectors: {
       title: "섹터 모멘텀",
       rows: Object.entries(SECTOR_ETFS).map(([label, symbol]) => (
-        <SectorRow key={symbol} label={label} q={quotes[symbol]} />
+        <SectorRow key={symbol} label={label} q={sectorQuotes[symbol]} />
       )),
     },
     commodities: {
@@ -100,7 +108,7 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
         "미국 30년물": rates["US30Y"],
       }).map(([label, q]) => <SectorRow key={label} label={label} q={q} pricePrefix="" priceSuffix="%" />),
     },
-  }), [commodities, forex, indices, quotes, rates]);
+  }), [commodities, forex, indices, sectorQuotes, rates]);
 
   const moveSection = (sectionId: SectionId, direction: -1 | 1) => {
     setSectionOrder((prev) => {
@@ -206,35 +214,30 @@ function SectorRow({
 }) {
   const pct = q?.change_pct ?? 0;
   const barWidth = Math.min(Math.abs(pct) * 10, 100);
+  const hasData = q && q.data_status !== "error";
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1 hover:bg-terminal-border group">
-      <span className="text-[11px] font-mono text-[#c9c9c9] flex-1 truncate" title={label}>{label}</span>
-
-      <div className="w-12 h-1.5 bg-terminal-border rounded-sm overflow-hidden">
-        {q && q.data_status !== "error" && (
-          <div
-            className={`h-full rounded-sm ${pct >= 0 ? "bg-terminal-green" : "bg-terminal-red"}`}
-            style={{ width: `${barWidth}%`, marginLeft: pct < 0 ? "auto" : undefined }}
-          />
+    <div className="px-3 py-1.5 hover:bg-terminal-border">
+      <div className="flex items-center justify-between gap-1 mb-1">
+        <span className="text-[10px] font-mono text-[#c9c9c9] truncate" title={label}>{label}</span>
+        {hasData ? (
+          <ChangeValue value={pct} suffix="%" className="text-[10px] shrink-0" />
+        ) : (
+          <span className="text-[10px] text-terminal-text-dim font-mono shrink-0">—</span>
         )}
       </div>
-
-      <div className="text-right w-16">
-        {!q || q.data_status === "error" ? (
-          <span className="text-2xs text-terminal-text-dim font-mono">—</span>
-        ) : (
-          <span className="text-2xs font-mono text-[#ededed]">
-            {pricePrefix}{formatNumber(q.price, 2)}{priceSuffix}
-          </span>
-        )}
-      </div>
-      <div className="text-right w-12">
-        {q && q.data_status !== "error" ? (
-          <ChangeValue value={pct} suffix="%" className="text-2xs" />
-        ) : (
-          <span className="text-2xs text-terminal-text-dim font-mono">—</span>
-        )}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-1 bg-terminal-border rounded-sm overflow-hidden">
+          {hasData && (
+            <div
+              className={`h-full rounded-sm ${pct >= 0 ? "bg-terminal-green" : "bg-terminal-red"}`}
+              style={{ width: `${barWidth}%`, marginLeft: pct < 0 ? "auto" : undefined }}
+            />
+          )}
+        </div>
+        <span className="text-[10px] font-mono text-[#ededed] w-14 text-right shrink-0">
+          {hasData ? `${pricePrefix}${formatNumber(q!.price, 2)}${priceSuffix}` : "—"}
+        </span>
       </div>
     </div>
   );

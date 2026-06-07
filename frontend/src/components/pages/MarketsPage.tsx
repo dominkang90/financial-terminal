@@ -38,7 +38,7 @@ export function MarketsPage() {
           </button>
         </div>
 
-        <section className={`border-b border-terminal-border ${chartExpanded ? "h-[calc(100vh-132px)] min-h-[640px]" : "h-[520px] min-h-[420px]"}`}>
+        <section className={`border-b border-terminal-border ${chartExpanded ? "h-[calc(100vh-132px)] min-h-[480px]" : "h-[320px] min-h-[280px] md:h-[520px] md:min-h-[420px]"}`}>
           <StockChart />
         </section>
 

@@ -7,7 +7,7 @@ export function OrdersPage() {
       <div className="flex-1 overflow-hidden">
         <StockChart />
       </div>
-      <div className="w-56 flex-shrink-0 border-l border-terminal-border overflow-hidden">
+      <div className="hidden md:block w-56 flex-shrink-0 border-l border-terminal-border overflow-hidden">
         <OrderPanel />
       </div>
     </div>

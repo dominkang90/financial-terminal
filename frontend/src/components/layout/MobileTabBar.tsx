@@ -24,14 +24,14 @@ export function MobileTabBar({ activeTab, onTabChange }: Props) {
             <button
               key={id}
               onClick={() => onTabChange(id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 isActive ? "text-[#ff6600]" : "text-[#555] active:text-[#888]"
               }`}
             >
               <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
               <span className="text-2xs font-mono">{label}</span>
               {isActive && (
-                <div className="absolute bottom-0 w-8 h-0.5 bg-[#ff6600] rounded-full" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#ff6600] rounded-full" />
               )}
             </button>
           );

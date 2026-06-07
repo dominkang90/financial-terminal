@@ -7,7 +7,7 @@ export function ChartPage() {
       <div className="flex-1 overflow-hidden">
         <StockChart />
       </div>
-      <div className="w-44 flex-shrink-0 border-l border-terminal-border overflow-hidden">
+      <div className="hidden md:block w-44 flex-shrink-0 border-l border-terminal-border overflow-hidden">
         <QuotePanel />
       </div>
     </div>

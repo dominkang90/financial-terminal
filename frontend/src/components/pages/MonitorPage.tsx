@@ -98,14 +98,14 @@ export function MonitorPage() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[1fr_360px]">
-        <section className="min-h-0 rounded border border-terminal-border bg-terminal-panel">
-          <div className="grid grid-cols-[minmax(190px,1fr)_90px_90px_90px] border-b border-terminal-border px-3 py-2 text-[11px] font-mono text-terminal-text-dim">
+        <section className="min-h-0 rounded border border-terminal-border bg-terminal-panel overflow-x-auto">
+          <div className="grid grid-cols-[minmax(140px,1fr)_80px_80px_70px] min-w-[370px] border-b border-terminal-border px-3 py-2 text-[11px] font-mono text-terminal-text-dim">
             <span>관심종목</span>
             <span className="text-right">가격</span>
             <span className="text-right">등락률</span>
             <span className="text-right">상태</span>
           </div>
-          <div className="divide-y divide-terminal-border/70">
+          <div className="divide-y divide-terminal-border/70 min-w-[370px]">
             {monitorRows.map(({ symbol, quote }) => {
               const move = Math.abs(quote?.change_pct ?? 0);
               const isHot = move >= 3;
@@ -116,7 +116,7 @@ export function MonitorPage() {
                   key={symbol}
                   type="button"
                   onClick={() => setActiveSymbol(symbol)}
-                  className={`grid w-full grid-cols-[minmax(190px,1fr)_90px_90px_90px] items-center px-3 py-3 text-left hover:bg-terminal-border/70 ${isActive ? "bg-terminal-accent/10" : ""}`}
+                  className={`grid w-full grid-cols-[minmax(140px,1fr)_80px_80px_70px] items-center px-3 py-3 text-left hover:bg-terminal-border/70 ${isActive ? "bg-terminal-accent/10" : ""}`}
                 >
                   <StockIdentity symbol={symbol} quote={quote} active={isActive} subtitle={quote ? quote.exchange : "데이터 대기 중"} />
                   <div className="text-right text-xs font-mono text-terminal-text-primary">

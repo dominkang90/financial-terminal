@@ -14,7 +14,7 @@ RULE_BASED_TEMPLATES = {
     "neutral": "현재 방향성이 불명확합니다. 주요 지지/저항 레벨을 관찰하며 대응하세요.",
 }
 
-GEMINI_FALLBACK_MODELS = ("gemini-2.0-flash", "gemini-1.5-flash")
+GEMINI_FALLBACK_MODELS = ("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-latest")
 
 
 async def _generate_gemini_text(prompt: str, api_key: str) -> Dict[str, str]:
@@ -218,5 +218,8 @@ async def chat_with_ai(
 
         response = await _generate_gemini_text(full_prompt, api_key)
         return {"reply": response["text"], "method": "gemini", "model": response["model"]}
-    except Exception as e:
-        return {"reply": f"AI 응답 오류: {str(e)}", "method": "error"}
+    except Exception:
+        return {
+            "reply": _rule_based_chat(message, context),
+            "method": "rule_based_fallback",
+        }

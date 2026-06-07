@@ -137,14 +137,14 @@ function FilterButton({
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 rounded border px-2 py-1 text-2xs font-mono transition",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
         active
-          ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
-          : "border-[#222] text-[#777] hover:text-[#bbb]",
+          ? "border-[#ff6600]/45 bg-[#ff6600]/12 text-[#ffb066]"
+          : "border-[#222] bg-[#111] text-[#777] hover:border-[#333] hover:text-[#ddd]",
       )}
     >
       <span>{label}</span>
-      {typeof count === "number" && <span className="opacity-75">{count}</span>}
+      {typeof count === "number" && <span className="text-[10px] opacity-75">{count}</span>}
     </button>
   );
 }
@@ -667,62 +667,70 @@ export function VideoNewsFeed() {
 
   return (
     <div className="h-full overflow-hidden bg-[#0a0a0a] text-white">
-      <ScrollArea className="h-full">
-        <div className="flex flex-col gap-3 pb-6">
-          {/* 헤더 + 필터 바 — NewsFeed 스타일 */}
-          <div className="border-b border-[#1a1a1a] bg-[#0d0d0d]">
-            <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
-              <Sparkles size={12} className="text-[#ff8833]" />
-              <span className="text-xs font-mono text-[#888]">유튜브 AI 인사이트</span>
-              <span className="text-2xs font-mono text-[#444] hidden sm:block">· 영상 분석 + 시장 톤 점수</span>
-              <div className="flex-1" />
-              <span className="text-2xs font-mono text-[#444]">업데이트 {payload ? formatTime(payload.updated_at) : "방금"}</span>
-              <button
-                onClick={() => load(topic)}
-                disabled={isLoading}
-                className="text-[#444] hover:text-[#888] disabled:opacity-40"
-              >
-                <RefreshCw size={11} className={isLoading ? "animate-spin" : ""} />
-              </button>
-              <span className="text-2xs text-[#333] font-mono">{filteredVideos.length}</span>
-            </div>
-
-            {/* 지표 요약 바 */}
-            <div className="flex gap-4 px-3 py-2 border-t border-[#1a1a1a] overflow-x-auto">
-              {cards.map((card) => (
-                <div key={card.title} className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-2xs font-mono text-[#555]">{card.title}</span>
-                  <span className={cn("text-xs font-mono font-semibold", card.accent)}>{card.value}</span>
+      <ScrollArea className="h-full px-4 py-4 md:px-6 md:py-5">
+        <div className="mx-auto flex max-w-[1680px] flex-col gap-5 pb-6">
+          <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
+            <CardContent className="flex flex-col gap-5 p-5 md:p-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-[#ff8833]">
+                    <Sparkles size={18} />
+                    <span className="text-lg font-semibold">AI 분석 인사이트</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-[#777]">일반 뉴스 카드와 비슷한 톤으로 정리하고, 선택한 영상의 실제 내용 기준 핵심을 아래에서 바로 읽을 수 있게 만들었습니다.</p>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-white/40">업데이트 {payload ? formatTime(payload.updated_at) : "방금"}</div>
+                  <button
+                    onClick={() => load(topic)}
+                    disabled={isLoading}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/70 transition hover:border-white/20 hover:text-white disabled:opacity-40"
+                  >
+                    <RefreshCw size={13} className={isLoading ? "animate-spin" : ""} />
+                    새로고침
+                  </button>
+                </div>
+              </div>
 
-            {/* 필터 */}
-            <div className="px-3 py-2 border-t border-[#1a1a1a] space-y-1.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-2xs font-mono text-[#555] mr-1">주제</span>
-                {topics.map((item) => (
-                  <FilterButton key={item.id} active={topic === item.id} label={item.label} onClick={() => setTopic(item.id)} />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {cards.map((card) => (
+                  <MetricCard key={card.title} title={card.title} value={card.value} hint={card.hint} accent={card.accent} />
                 ))}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-2xs font-mono text-[#555] mr-1">레이어</span>
-                <FilterButton active={tier === "all"} label="전체" count={videos.length} onClick={() => setTier("all")} />
-                {tierFilters.map((item) => (
-                  <FilterButton key={item.id} active={tier === item.id} label={item.label} count={item.count} onClick={() => setTier(item.id)} />
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-2xs font-mono text-[#555] mr-1">채널</span>
-                <FilterButton active={source === "all"} label="전체" count={videos.length} onClick={() => setSource("all")} />
-                {sourceFilters.map((item) => (
-                  <FilterButton key={item.id} active={source === item.id} label={item.label} count={item.count} onClick={() => setSource(item.id)} />
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <div className="px-3 flex flex-col gap-3">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-2">
+                  <div className="text-xs text-white/45">주제</div>
+                  <div className="flex max-w-full flex-wrap gap-2">
+                    {topics.map((item) => (
+                      <FilterButton key={item.id} active={topic === item.id} label={item.label} onClick={() => setTopic(item.id)} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid flex-1 gap-3 md:grid-cols-2 xl:max-w-[760px]">
+                  <div className="space-y-2">
+                    <div className="text-xs text-white/45">레이어</div>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterButton active={tier === "all"} label="전체" count={videos.length} onClick={() => setTier("all")} />
+                      {tierFilters.map((item) => (
+                        <FilterButton key={item.id} active={tier === item.id} label={item.label} count={item.count} onClick={() => setTier(item.id)} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs text-white/45">채널</div>
+                    <div className="flex max-h-[90px] flex-wrap gap-2 overflow-auto pr-1">
+                      <FilterButton active={source === "all"} label="전체" count={videos.length} onClick={() => setSource("all")} />
+                      {sourceFilters.map((item) => (
+                        <FilterButton key={item.id} active={source === item.id} label={item.label} count={item.count} onClick={() => setSource(item.id)} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <InsightDashboard
             videos={filteredVideos}
@@ -763,53 +771,62 @@ export function VideoNewsFeed() {
             </Card>
           ) : null}
 
-          {/* 영상 리스트 */}
-          <div className="border border-[#222] rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-[#1a1a1a] bg-[#0d0d0d]">
-              <span className="text-xs font-mono text-[#888]">영상 리스트</span>
-              <span className="text-2xs font-mono text-[#444]">총 {filteredVideos.length}건</span>
-            </div>
-            {isLoading && filteredVideos.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center bg-[#111]">
-                <div className="text-center space-y-2">
-                  <RefreshCw size={16} className="mx-auto animate-spin text-[#ff6600]" />
-                  <div className="text-xs text-[#555] font-mono">유튜브 영상 분석 중...</div>
+          <div className="space-y-5">
+            <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>뉴스 리스트</CardTitle>
+                    <CardDescription>카드를 클릭하거나 터치하면 팝업으로 상세 분석을 열고, 평소에는 더 많은 리스트를 한 번에 볼 수 있습니다.</CardDescription>
+                  </div>
+                  <div className="text-xs text-white/40">총 {filteredVideos.length}건</div>
                 </div>
-              </div>
-            ) : filteredVideos.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center bg-[#111] text-xs text-[#444] font-mono">현재 조건에 맞는 영상이 없습니다.</div>
-            ) : (
-              <div className="bg-[#111]">
-                <Virtuoso
-                  style={{ height: 720 }}
-                  totalCount={filteredVideos.length}
-                  overscan={300}
-                  itemContent={(index) => {
-                    const article = filteredVideos[index];
-                    return (
-                      <div className="p-3 border-b border-[#1a1a1a]">
-                        <VideoListCard article={article} active={selected?.id === article.id && sheetOpen} onSelect={selectArticle} />
-                      </div>
-                    );
-                  }}
-                />
-              </div>
-            )}
-          </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading && filteredVideos.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center">
+                    <div className="space-y-3 text-center">
+                      <RefreshCw size={18} className="mx-auto animate-spin text-[#8EF3C5]" />
+                      <div className="text-sm text-white/45">유튜브 영상과 인사이트를 정리하는 중...</div>
+                    </div>
+                  </div>
+                ) : filteredVideos.length === 0 ? (
+                  <div className="flex h-[320px] items-center justify-center text-sm text-white/45">현재 조건에 맞는 영상이 없습니다.</div>
+                ) : (
+                  <Virtuoso
+                    style={{ height: 720 }}
+                    totalCount={filteredVideos.length}
+                    overscan={300}
+                    itemContent={(index) => {
+                      const article = filteredVideos[index];
+                      return (
+                        <div className="pb-3">
+                          <VideoListCard article={article} active={selected?.id === article.id && sheetOpen} onSelect={selectArticle} />
+                        </div>
+                      );
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
 
-          {/* 채널 컨센서스 */}
-          {filteredConsensus.length > 0 && (
-            <div className="border border-[#222] rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] bg-[#0d0d0d]">
-                <Tags size={11} className="text-[#B4C2FF]" />
-                <span className="text-xs font-mono text-[#888]">채널 컨센서스</span>
-              </div>
-              <div className="bg-[#111] divide-y divide-[#1a1a1a]">
-                {filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)}
-              </div>
-            </div>
-          )}
-        </div>
+            <Card className="rounded-2xl border border-[#1f1f1f] bg-[#111]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2 text-white">
+                  <Tags size={16} className="text-[#B4C2FF]" />
+                  <CardTitle>채널 컨센서스</CardTitle>
+                </div>
+                <CardDescription>현재 필터에서 같은 방향을 말하는 채널을 묶었습니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {filteredConsensus.length > 0 ? (
+                  filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)
+                ) : (
+                  <div className="text-sm text-white/45">현재 필터에 맞는 컨센서스가 없습니다.</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </ScrollArea>
 

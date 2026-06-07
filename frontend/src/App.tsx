@@ -12,6 +12,7 @@ import { PortfolioPage } from "@/components/pages/PortfolioPage";
 import { OptionsPage } from "@/components/pages/OptionsPage";
 import { OrdersPage } from "@/components/pages/OrdersPage";
 import { AIPage } from "@/components/pages/AIPage";
+import { MonitorPage } from "@/components/pages/MonitorPage";
 import { useAuthStore } from "@/store/authStore";
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
       case "options": return <OptionsPage />;
       case "orders": return <OrdersPage />;
       case "ai": return <AIPage />;
+      case "monitor": return <MonitorPage />;
       default: return <MarketsPage />;
     }
   };

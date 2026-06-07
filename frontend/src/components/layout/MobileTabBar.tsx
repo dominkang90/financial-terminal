@@ -1,4 +1,4 @@
-import { BarChart2, Briefcase, BookOpen, Bot, TrendingUp } from "lucide-react";
+import { BarChart2, Bell, Briefcase, BookOpen, TrendingUp } from "lucide-react";
 import type { TabId } from "@/types";
 
 interface Props {
@@ -10,8 +10,8 @@ const MOBILE_TABS: { id: TabId; label: string; icon: typeof BarChart2 }[] = [
   { id: "markets", label: "시장", icon: TrendingUp },
   { id: "chart", label: "차트", icon: BarChart2 },
   { id: "news", label: "뉴스", icon: BookOpen },
+  { id: "monitor", label: "감시", icon: Bell },
   { id: "portfolio", label: "포트폴리오", icon: Briefcase },
-  { id: "ai", label: "AI", icon: Bot },
 ];
 
 export function MobileTabBar({ activeTab, onTabChange }: Props) {

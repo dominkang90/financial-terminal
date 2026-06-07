@@ -20,6 +20,7 @@ export const NAV_ITEMS: { id: TabId; label: string; labelKo: string; icon: typeo
   { id: "chart", label: "Chart", labelKo: "차트", icon: BarChart2 },
   { id: "portfolio", label: "Portfolio", labelKo: "포트폴리오", icon: Briefcase },
   { id: "news", label: "News", labelKo: "뉴스", icon: BookOpen },
+  { id: "monitor", label: "Monitor", labelKo: "감시", icon: Bell },
   { id: "options", label: "Options", labelKo: "옵션", icon: Wrench },
   { id: "orders", label: "Orders", labelKo: "주문", icon: Wrench },
   { id: "ai", label: "AI", labelKo: "AI", icon: Bot },
@@ -75,7 +76,11 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
 
         {/* 우측 액션 */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button className="p-1.5 rounded hover:bg-terminal-border text-terminal-text-dim hover:text-terminal-text-primary">
+          <button
+            onClick={() => onTabChange("monitor")}
+            className={`p-1.5 rounded hover:bg-terminal-border ${activeTab === "monitor" ? "text-terminal-accent" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
+            title="실시간 감시판"
+          >
             <Bell size={13} />
           </button>
           <button

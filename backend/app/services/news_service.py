@@ -687,8 +687,38 @@ async def _resolve_youtube_feed_url(channel: Dict[str, Any]) -> Optional[str]:
     if channel_id:
         return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
 
-    # 실시간 로딩을 위해 요청 시점에는 채널 페이지를 크롤링하지 않는다.
-    # 새 유튜브 소스는 channel_id를 코드에 고정한 뒤 활성화한다.
+    channel_url = channel.get("channel_url")
+    if not channel_url:
+        return None
+
+    cache_key = f"yt-feed-url:{channel_url}"
+    if cache_key in _youtube_feed_cache:
+        return _youtube_feed_cache[cache_key]
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+            resp = await client.get(channel_url)
+            if resp.status_code != 200:
+                return None
+            html_text = resp.text
+
+        patterns = [
+            r"https://www\.youtube\.com/feeds/videos\.xml\?channel_id=([A-Za-z0-9_-]+)",
+            r'"channelId"\s*:\s*"([A-Za-z0-9_-]+)"',
+            r'"externalId"\s*:\s*"([A-Za-z0-9_-]+)"',
+            r'"browseId"\s*:\s*"([A-Za-z0-9_-]+)"',
+            r'<link[^>]+href=["\']https://www\.youtube\.com/feeds/videos\.xml\?channel_id=([A-Za-z0-9_-]+)["\']',
+            r'<meta[^>]+itemprop=["\']channelId["\'][^>]+content=["\']([A-Za-z0-9_-]+)["\']',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html_text)
+            if match:
+                feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={match.group(1)}"
+                _youtube_feed_cache[cache_key] = feed_url
+                return feed_url
+    except Exception:
+        return None
+
     return None
 
 

@@ -39,6 +39,7 @@ export interface Quote {
   low_krw?: number;
   data_status: DataStatus;
   data_source?: string;
+  logo_url?: string;
   note?: string;
   error?: string;
 }

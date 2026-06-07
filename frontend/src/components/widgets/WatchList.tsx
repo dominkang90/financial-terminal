@@ -3,6 +3,7 @@ import { Plus, X, Star } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { ChangeValue } from "@/components/common/DataStatus";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import {
   canToggleCurrency,
   formatMoney,
@@ -58,7 +59,7 @@ export function WatchList() {
       </form>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-1 px-3 py-1 text-2xs text-terminal-text-dim font-mono border-b border-terminal-border">
+        <div className="grid grid-cols-[minmax(150px,1fr)_auto_auto] gap-2 px-3 py-1 text-2xs text-terminal-text-dim font-mono border-b border-terminal-border">
           <span>종목</span>
           <span className="text-right">가격</span>
           <span className="text-right w-14">등락</span>
@@ -76,17 +77,13 @@ export function WatchList() {
             <div
               key={symbol}
               onClick={() => setActiveSymbol(symbol)}
-              className={`group grid grid-cols-[1fr_auto_auto] gap-1 px-3 py-1.5 cursor-pointer transition-colors border-b border-terminal-border/50 ${
+              className={`group grid grid-cols-[minmax(150px,1fr)_auto_auto] gap-2 px-3 py-2 cursor-pointer transition-colors border-b border-terminal-border/50 ${
                 isActive
                   ? "bg-terminal-accent/10 border-l-2 border-l-terminal-accent"
                   : "hover:bg-terminal-border"
               }`}
             >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className={`text-xs font-mono font-semibold truncate ${isActive ? "text-terminal-accent" : "text-terminal-text-primary"}`}>
-                  {q?.symbol || symbol}
-                </span>
-              </div>
+              <StockIdentity symbol={symbol} quote={q} compact active={isActive} />
 
               <div className="text-right leading-tight">
                 {q?.data_status === "error" || !q || !priceDisplay ? (

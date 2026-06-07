@@ -1,0 +1,214 @@
+import { useEffect, useMemo, useState } from "react";
+import { Bell, Plus, RefreshCcw, Target, Trash2 } from "lucide-react";
+import { useMarketStore } from "@/store/marketStore";
+import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
+import { StockIdentity } from "@/components/common/StockIdentity";
+
+const STORAGE_KEY = "price-monitor-alerts";
+
+type AlertDirection = "above" | "below";
+
+interface PriceAlert {
+  id: string;
+  symbol: string;
+  target: number;
+  direction: AlertDirection;
+}
+
+function loadAlerts(): PriceAlert[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    if (!Array.isArray(saved)) return [];
+    return saved.filter((item): item is PriceAlert => (
+      typeof item.id === "string" &&
+      typeof item.symbol === "string" &&
+      typeof item.target === "number" &&
+      (item.direction === "above" || item.direction === "below")
+    ));
+  } catch {
+    return [];
+  }
+}
+
+function getAlertStatus(alert: PriceAlert, price?: number) {
+  if (typeof price !== "number") return "waiting";
+  if (alert.direction === "above") return price >= alert.target ? "hit" : "watching";
+  return price <= alert.target ? "hit" : "watching";
+}
+
+export function MonitorPage() {
+  const { watchlist, quotes, activeSymbol, setActiveSymbol, fetchWatchlistQuotes } = useMarketStore();
+  const [alerts, setAlerts] = useState<PriceAlert[]>(() => loadAlerts());
+  const [symbolInput, setSymbolInput] = useState(activeSymbol);
+  const [targetInput, setTargetInput] = useState("");
+  const [direction, setDirection] = useState<AlertDirection>("above");
+
+  useEffect(() => {
+    fetchWatchlistQuotes();
+    const id = setInterval(fetchWatchlistQuotes, 30_000);
+    return () => clearInterval(id);
+  }, [fetchWatchlistQuotes]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts));
+  }, [alerts]);
+
+  const monitorRows = useMemo(() => {
+    return watchlist
+      .map((symbol) => ({ symbol, quote: quotes[symbol] }))
+      .sort((a, b) => Math.abs(b.quote?.change_pct ?? 0) - Math.abs(a.quote?.change_pct ?? 0));
+  }, [quotes, watchlist]);
+
+  const hitAlerts = useMemo(() => (
+    alerts.filter((alert) => getAlertStatus(alert, quotes[alert.symbol]?.price) === "hit")
+  ), [alerts, quotes]);
+
+  const addAlert = (event: React.FormEvent) => {
+    event.preventDefault();
+    const symbol = symbolInput.trim().toUpperCase();
+    const target = Number(targetInput);
+    if (!symbol || Number.isNaN(target) || target <= 0) return;
+    setAlerts((prev) => [
+      ...prev,
+      { id: `${symbol}-${Date.now()}`, symbol, target, direction },
+    ]);
+    setTargetInput("");
+  };
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-[#080808]">
+      <div className="flex flex-wrap items-center gap-3 border-b border-terminal-border bg-[#0d0d0d] px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-mono text-terminal-text-primary">
+            <Bell size={15} className="text-terminal-accent" />
+            실시간 감시판
+          </div>
+          <div className="mt-1 text-[11px] font-mono text-terminal-text-dim">
+            관심종목을 30초마다 다시 읽고, 큰 움직임과 목표가 도달을 한곳에서 봅니다.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchWatchlistQuotes()}
+          className="ml-auto inline-flex items-center gap-1 rounded border border-terminal-border px-2 py-1 text-xs font-mono text-terminal-text-secondary hover:text-terminal-text-primary"
+        >
+          <RefreshCcw size={12} />
+          새로고침
+        </button>
+      </div>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[1fr_360px]">
+        <section className="min-h-0 rounded border border-terminal-border bg-terminal-panel">
+          <div className="grid grid-cols-[minmax(190px,1fr)_90px_90px_90px] border-b border-terminal-border px-3 py-2 text-[11px] font-mono text-terminal-text-dim">
+            <span>관심종목</span>
+            <span className="text-right">가격</span>
+            <span className="text-right">등락률</span>
+            <span className="text-right">상태</span>
+          </div>
+          <div className="divide-y divide-terminal-border/70">
+            {monitorRows.map(({ symbol, quote }) => {
+              const move = Math.abs(quote?.change_pct ?? 0);
+              const isHot = move >= 3;
+              const isActive = symbol === activeSymbol;
+
+              return (
+                <button
+                  key={symbol}
+                  type="button"
+                  onClick={() => setActiveSymbol(symbol)}
+                  className={`grid w-full grid-cols-[minmax(190px,1fr)_90px_90px_90px] items-center px-3 py-3 text-left hover:bg-terminal-border/70 ${isActive ? "bg-terminal-accent/10" : ""}`}
+                >
+                  <StockIdentity symbol={symbol} quote={quote} active={isActive} subtitle={quote ? quote.exchange : "데이터 대기 중"} />
+                  <div className="text-right text-xs font-mono text-terminal-text-primary">
+                    {quote ? formatNumber(quote.price, 2) : "—"}
+                  </div>
+                  <div className="text-right">
+                    {quote ? <ChangeValue value={quote.change_pct ?? 0} suffix="%" className="text-xs" /> : <span className="text-xs text-terminal-text-dim">—</span>}
+                  </div>
+                  <div className="text-right">
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${isHot ? "bg-terminal-yellow/15 text-terminal-yellow" : "bg-[#111] text-terminal-text-dim"}`}>
+                      {isHot ? "급변" : "감시"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <aside className="space-y-3">
+          <section className="rounded border border-terminal-border bg-terminal-panel">
+            <div className="flex items-center gap-2 border-b border-terminal-border px-3 py-2 text-xs font-mono text-terminal-text-primary">
+              <Target size={13} className="text-terminal-accent" />
+              목표가 알림
+              <span className="ml-auto text-[10px] text-terminal-text-dim">{hitAlerts.length}개 도달</span>
+            </div>
+            <form onSubmit={addAlert} className="space-y-2 border-b border-terminal-border p-3">
+              <div className="grid grid-cols-[1fr_1fr] gap-2">
+                <input
+                  value={symbolInput}
+                  onChange={(event) => setSymbolInput(event.target.value)}
+                  className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                  placeholder="종목 예: NVDA"
+                />
+                <input
+                  value={targetInput}
+                  onChange={(event) => setTargetInput(event.target.value)}
+                  className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                  placeholder="목표가"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={direction}
+                  onChange={(event) => setDirection(event.target.value as AlertDirection)}
+                  className="flex-1 rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                >
+                  <option value="above">이 가격 이상</option>
+                  <option value="below">이 가격 이하</option>
+                </select>
+                <button type="submit" className="inline-flex items-center gap-1 rounded bg-terminal-accent px-2 py-1 text-xs font-mono font-semibold text-black">
+                  <Plus size={12} />
+                  추가
+                </button>
+              </div>
+            </form>
+
+            <div className="max-h-[420px] overflow-y-auto">
+              {alerts.length === 0 ? (
+                <div className="p-3 text-xs font-mono text-terminal-text-dim">
+                  아직 목표가 알림이 없습니다.
+                </div>
+              ) : alerts.map((alert) => {
+                const quote = quotes[alert.symbol];
+                const status = getAlertStatus(alert, quote?.price);
+                return (
+                  <div key={alert.id} className="flex items-center gap-2 border-b border-terminal-border/70 px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-mono text-terminal-text-primary">{alert.symbol}</div>
+                      <div className="text-[10px] font-mono text-terminal-text-dim">
+                        현재 {quote ? formatNumber(quote.price, 2) : "—"} · 목표 {alert.direction === "above" ? "이상" : "이하"} {formatNumber(alert.target, 2)}
+                      </div>
+                    </div>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${status === "hit" ? "bg-terminal-green/15 text-terminal-green" : "bg-[#111] text-terminal-text-dim"}`}>
+                      {status === "hit" ? "도달" : "대기"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAlerts((prev) => prev.filter((item) => item.id !== alert.id))}
+                      className="text-terminal-text-dim hover:text-terminal-red"
+                      title="삭제"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import { BarChart2, Bell, Briefcase, BookOpen, TrendingUp } from "lucide-react";
+import { BarChart2, Bell, Briefcase, BookOpen, TrendingUp, Home } from "lucide-react";
 import type { TabId } from "@/types";
 
 interface Props {
@@ -7,6 +7,7 @@ interface Props {
 }
 
 const MOBILE_TABS: { id: TabId; label: string; icon: typeof BarChart2 }[] = [
+  { id: "home", label: "홈", icon: Home },
   { id: "markets", label: "시장", icon: TrendingUp },
   { id: "chart", label: "차트", icon: BarChart2 },
   { id: "news", label: "뉴스", icon: BookOpen },

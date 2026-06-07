@@ -199,6 +199,7 @@ export type ChartPeriod = "1mo" | "3mo" | "6mo" | "1y" | "2y" | "5y" | "10y";
 export type ChartInterval = "1d" | "1wk" | "1mo";
 
 export type TabId =
+  | "home"
   | "markets"
   | "chart"
   | "news"

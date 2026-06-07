@@ -13,10 +13,11 @@ import { OptionsPage } from "@/components/pages/OptionsPage";
 import { OrdersPage } from "@/components/pages/OrdersPage";
 import { AIPage } from "@/components/pages/AIPage";
 import { MonitorPage } from "@/components/pages/MonitorPage";
+import { HomePage } from "@/components/pages/HomePage";
 import { useAuthStore } from "@/store/authStore";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabId>("markets");
+  const [activeTab, setActiveTab] = useState<TabId>("home");
   const [watchlistCollapsed, setWatchlistCollapsed] = useState(false);
   const { fetchMe } = useAuthStore();
 
@@ -26,6 +27,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (activeTab) {
+      case "home": return <HomePage />;
       case "markets": return <MarketsPage />;
       case "chart": return <ChartPage />;
       case "news": return <NewsPage />;
@@ -34,7 +36,7 @@ export default function App() {
       case "orders": return <OrdersPage />;
       case "ai": return <AIPage />;
       case "monitor": return <MonitorPage />;
-      default: return <MarketsPage />;
+      default: return <HomePage />;
     }
   };
 

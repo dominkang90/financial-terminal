@@ -42,13 +42,17 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
     <div className="flex flex-col flex-shrink-0 bg-terminal-bg border-b border-terminal-border">
       {/* 최상단 메뉴 바 */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-terminal-border">
-        {/* 로고 */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 mr-2">
+        {/* 로고 — 클릭 시 홈으로 */}
+        <button
+          type="button"
+          onClick={() => onTabChange("home")}
+          className="flex items-center gap-1.5 flex-shrink-0 mr-2 hover:opacity-80 transition-opacity"
+        >
           <div className="w-5 h-5 bg-terminal-accent flex items-center justify-center rounded-sm">
             <span className="text-black text-2xs font-bold font-mono">FT</span>
           </div>
           <span className="text-xs font-bold text-terminal-accent font-mono hidden sm:block">FinTerminal</span>
-        </div>
+        </button>
 
         {/* 내비게이션 탭 - 데스크톱만 표시 */}
         <nav className="hidden md:flex items-center gap-0.5 flex-shrink-0">

@@ -1040,21 +1040,75 @@ def _build_overall_video_insight(videos: List[Dict[str, Any]]) -> str:
     topic_counts: Dict[str, int] = {}
     tag_counts: Dict[str, int] = {}
     tier_counts: Dict[str, int] = {}
+    sentiment_counts: Dict[str, int] = {"positive": 0, "negative": 0, "neutral": 0}
+    ticker_counts: Dict[str, int] = {}
+    topic_videos: Dict[str, List[Dict[str, Any]]] = {}
+
     for video in videos:
         topic = video.get("topic", "macro")
         topic_counts[topic] = topic_counts.get(topic, 0) + 1
+        topic_videos.setdefault(topic, []).append(video)
         tier = video.get("tier", "a")
         tier_counts[tier] = tier_counts.get(tier, 0) + 1
+        sent = video.get("sentiment", "neutral")
+        sentiment_counts[sent] = sentiment_counts.get(sent, 0) + 1
         for tag in video.get("tags", [])[:4]:
             tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        for ticker in video.get("tickers", [])[:5]:
+            ticker_counts[ticker] = ticker_counts.get(ticker, 0) + 1
 
-    top_topics = sorted(topic_counts.items(), key=lambda item: item[1], reverse=True)[:2]
-    top_tags = sorted(tag_counts.items(), key=lambda item: item[1], reverse=True)[:4]
-    top_tiers = sorted(tier_counts.items(), key=lambda item: item[1], reverse=True)[:2]
-    topic_text = ", ".join(f"{TOPIC_LABELS.get(topic, topic)} {count}건" for topic, count in top_topics)
-    tag_text = ", ".join(tag for tag, _ in top_tags) or "핵심 태그 집계 중"
-    tier_text = ", ".join(f"{TIER_LABELS.get(tier, tier)} {count}건" for tier, count in top_tiers)
-    return f"최근 유튜브 흐름은 {topic_text} 중심이며, 채널 레이어는 {tier_text} 비중이 큽니다. 반복적으로 보이는 키워드는 {tag_text}입니다. 빠른 판단은 Tier S로 팩트를 확인하고, Tier A로 해석을 붙인 뒤, Tier B로 AI·반도체 장기축을 점검하는 순서를 추천합니다."
+    total = len(videos)
+    top_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:4]
+    top_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+    top_tickers = sorted(ticker_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+    pos_pct = round(sentiment_counts["positive"] / total * 100)
+    neg_pct = round(sentiment_counts["negative"] / total * 100)
+    neu_pct = 100 - pos_pct - neg_pct
+
+    if pos_pct >= 55:
+        sentiment_summary = f"전반적으로 긍정적 흐름이 우세합니다 (긍정 {pos_pct}% / 부정 {neg_pct}% / 중립 {neu_pct}%)."
+    elif neg_pct >= 55:
+        sentiment_summary = f"전반적으로 부정적·방어적 시각이 우세합니다 (부정 {neg_pct}% / 긍정 {pos_pct}% / 중립 {neu_pct}%)."
+    elif neg_pct >= 40:
+        sentiment_summary = f"경계심이 높아진 상태입니다 (부정 {neg_pct}% / 긍정 {pos_pct}% / 중립 {neu_pct}%)."
+    else:
+        sentiment_summary = f"시장 방향성에 대한 의견이 갈리고 있습니다 (긍정 {pos_pct}% / 부정 {neg_pct}% / 중립 {neu_pct}%)."
+
+    # 토픽별 핵심 영상 인사이트
+    topic_sections: List[str] = []
+    for topic_id, count in top_topics:
+        label = TOPIC_LABELS.get(topic_id, topic_id)
+        vids = topic_videos.get(topic_id, [])[:3]
+        bullet_lines: List[str] = []
+        for v in vids:
+            insight = v.get("insight", "").strip()
+            title = v.get("title", "").strip()
+            src = v.get("source", "")
+            if insight:
+                bullet_lines.append(f"  [{src}] {insight}")
+            elif title:
+                bullet_lines.append(f"  [{src}] {title}")
+        bullets = "\n".join(bullet_lines)
+        topic_sections.append(f"[ {label} — {count}건 ]\n{bullets}")
+
+    topic_block = "\n\n".join(topic_sections)
+    tag_text = ", ".join(tag for tag, _ in top_tags) or "집계 중"
+    ticker_text = ", ".join(f"${t}" for t, _ in top_tickers) if top_tickers else "없음"
+
+    tier_s = tier_counts.get("s", 0)
+    tier_a = tier_counts.get("a", 0)
+    tier_b = tier_counts.get("b", 0)
+
+    return (
+        f"오늘 분석한 유튜브 시장 영상은 총 {total}건입니다. {sentiment_summary}\n\n"
+        f"{topic_block}\n\n"
+        f"[ 반복 언급 티커 ]\n  {ticker_text}\n\n"
+        f"[ 반복 키워드 ]\n  {tag_text}\n\n"
+        f"[ 채널 구성 ]\n  Tier S(속보·팩트) {tier_s}건 / Tier A(해설) {tier_a}건 / Tier B(장기·테마) {tier_b}건\n\n"
+        f"[ 활용 전략 ]\n  Tier S 채널로 팩트를 먼저 확인하고, Tier A 해설로 맥락을 붙인 뒤, "
+        f"Tier B 테마 채널로 장기 포지션 방향을 점검하는 순서를 권장합니다. "
+        f"반복 언급되는 티커와 키워드는 단기 모멘텀 신호로 참고할 수 있습니다."
+    )
 
 
 async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict[str, Any]:

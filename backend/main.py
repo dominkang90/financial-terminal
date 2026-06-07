@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -12,10 +13,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+async def _warmup_youtube_news() -> None:
+    try:
+        from app.services.news_service import get_youtube_market_videos
+        await get_youtube_market_videos(limit=30, topic="all")
+        logger.info("YouTube 뉴스 워밍업 완료")
+    except Exception as exc:
+        logger.warning("YouTube 뉴스 워밍업 실패: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Financial Terminal API 시작")
     await create_tables()
+    asyncio.create_task(_warmup_youtube_news())
     yield
     logger.info("Financial Terminal API 종료")
 

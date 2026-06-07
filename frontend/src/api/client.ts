@@ -53,6 +53,9 @@ export const marketApi = {
 
   etfHoldings: (symbol: string) =>
     api.get(`/market/etf/${symbol}/holdings`).then((r) => r.data),
+
+  fundamentals: (symbol: string) =>
+    api.get(`/market/fundamentals/${symbol}`).then((r) => r.data),
 };
 
 // ── 뉴스 ──────────────────────────────────────────────────

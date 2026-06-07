@@ -11,6 +11,25 @@ import {
   getEffectiveDisplayMode,
 } from "@/lib/currencyDisplay";
 
+function ChangeBadge({ value }: { value: number }) {
+  const abs = Math.abs(value);
+  const sign = value >= 0 ? "+" : "";
+  const text = `${sign}${value.toFixed(2)}%`;
+
+  if (abs >= 3) {
+    return (
+      <span className={`inline-block px-1.5 py-0.5 rounded text-2xs font-mono font-bold ${
+        value >= 0 ? "bg-terminal-green/20 text-terminal-green" : "bg-terminal-red/20 text-terminal-red"
+      }`}>{text}</span>
+    );
+  }
+  return (
+    <span className={`text-2xs font-mono ${value >= 0 ? "text-terminal-green" : "text-terminal-red"}`}>
+      {text}
+    </span>
+  );
+}
+
 export function WatchList() {
   const {
     watchlist, quotes, activeSymbol,
@@ -107,9 +126,9 @@ export function WatchList() {
                 )}
               </div>
 
-              <div className="text-right w-14 flex items-center justify-end gap-1">
+              <div className="text-right w-16 flex items-center justify-end gap-1">
                 {q && q.data_status !== "error" ? (
-                  <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />
+                  <ChangeBadge value={q.change_pct ?? 0} />
                 ) : (
                   <span className="text-2xs text-terminal-text-dim font-mono">—</span>
                 )}

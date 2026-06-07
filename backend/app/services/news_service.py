@@ -6,10 +6,35 @@
 """
 import asyncio
 import html
+import json
+import os
 import time
 import re
 from email.utils import parsedate_to_datetime
 from typing import List, Dict, Any, Optional, Tuple
+
+_DISK_CACHE_PATH = "/tmp/ft_yt_news_cache.json"
+_DISK_CACHE_TTL = 1800  # 30분: 서버 재시작 후에도 캐시 재활용
+
+
+def _load_disk_cache() -> Optional[Dict[str, Any]]:
+    try:
+        if not os.path.exists(_DISK_CACHE_PATH):
+            return None
+        if time.time() - os.stat(_DISK_CACHE_PATH).st_mtime > _DISK_CACHE_TTL:
+            return None
+        with open(_DISK_CACHE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_disk_cache(data: Dict[str, Any]) -> None:
+    try:
+        with open(_DISK_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception:
+        pass
 
 from cachetools import TTLCache
 import feedparser
@@ -352,69 +377,32 @@ async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
         except Exception:
-            YouTubeTranscriptApi = None  # type: ignore[assignment]
-
-        if YouTubeTranscriptApi is not None:
-            try:
-                transcript_items: Any
-                if hasattr(YouTubeTranscriptApi, "get_transcript"):
-                    transcript_items = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
-                else:
-                    api = YouTubeTranscriptApi()
-                    fetched = api.fetch(video_id, languages=["ko", "en"])
-                    transcript_items = list(fetched)
-
-                chunks: List[str] = []
-                for item in transcript_items:
-                    if isinstance(item, dict):
-                        text = item.get("text", "")
-                    else:
-                        text = getattr(item, "text", "")
-                    text = _strip_youtube_noise(text)
-                    if text and not _is_promotional_sentence(text):
-                        chunks.append(text)
-
-                transcript = _compact_text(" ".join(chunks), max_len=2400)
-                if transcript:
-                    return transcript
-            except Exception:
-                pass
+            return None
 
         try:
-            from yt_dlp import YoutubeDL
+            transcript_items: Any
+            if hasattr(YouTubeTranscriptApi, "get_transcript"):
+                transcript_items = YouTubeTranscriptApi.get_transcript(video_id, languages=["ko", "en"])
+            else:
+                api = YouTubeTranscriptApi()
+                fetched = api.fetch(video_id, languages=["ko", "en"])
+                transcript_items = list(fetched)
 
-            ydl_opts: Any = {"quiet": True, "skip_download": True, "no_warnings": True}
-            with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            chunks: List[str] = []
+            for item in transcript_items:
+                text = item.get("text", "") if isinstance(item, dict) else getattr(item, "text", "")
+                text = _strip_youtube_noise(text)
+                if text and not _is_promotional_sentence(text):
+                    chunks.append(text)
 
-            caption_pools = [info.get("subtitles") or {}, info.get("automatic_captions") or {}]
-            preferred_langs = ["ko", "ko-orig", "en", "en-orig"]
-            preferred_exts = ["json3", "srv3", "srv1", "vtt", "ttml"]
-
-            for pool in caption_pools:
-                for lang in preferred_langs:
-                    tracks = pool.get(lang) or []
-                    tracks = sorted(tracks, key=lambda item: preferred_exts.index(item.get("ext")) if item.get("ext") in preferred_exts else 999)
-                    for track in tracks:
-                        url = track.get("url")
-                        ext = track.get("ext")
-                        if not url:
-                            continue
-                        with httpx.Client(timeout=8.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
-                            resp = client.get(url)
-                            resp.raise_for_status()
-                            if ext == "json3":
-                                transcript = _parse_json3_transcript(resp.json())
-                            else:
-                                transcript = _compact_text(_strip_youtube_noise(resp.text), max_len=2400)
-                        if transcript:
-                            return transcript
+            return _compact_text(" ".join(chunks), max_len=2400) or None
         except Exception:
             return None
 
-        return None
-
-    transcript = await asyncio.to_thread(_load_transcript)
+    try:
+        transcript = await asyncio.wait_for(asyncio.to_thread(_load_transcript), timeout=5.0)
+    except Exception:
+        transcript = None
     _youtube_transcript_cache[cache_key] = transcript
     return transcript
 
@@ -1074,6 +1062,13 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     if cache_key in _news_cache:
         return _news_cache[cache_key]
 
+    # 서버 재시작 후에도 디스크 캐시에서 빠르게 복원
+    if topic == "all":
+        disk_data = _load_disk_cache()
+        if disk_data:
+            _news_cache[cache_key] = disk_data
+            return disk_data
+
     async def fetch_channel(channel: Dict[str, Any]) -> List[Dict[str, Any]]:
         feed_url = await _resolve_youtube_feed_url(channel)
         if not feed_url:
@@ -1172,6 +1167,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
         "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     _news_cache[cache_key] = result
+    if topic == "all":
+        _save_disk_cache(result)
     return result
 
 

@@ -694,3 +694,109 @@ async def get_etf_holdings(symbol: str) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"symbol": symbol, "data_status": "error", "error": str(e)}
+
+
+_fundamentals_cache: TTLCache = TTLCache(maxsize=100, ttl=1800)
+
+
+async def get_stock_fundamentals(symbol: str) -> Dict[str, Any]:
+    sym = symbol.upper()
+    cache_key = f"fund:{sym}"
+    if cache_key in _fundamentals_cache:
+        return _fundamentals_cache[cache_key]
+
+    def _fetch() -> Dict[str, Any]:
+        import yfinance as yf
+
+        t = yf.Ticker(sym)
+        info = t.info or {}
+
+        def _s(val: Any) -> Any:
+            if val is None:
+                return None
+            if isinstance(val, float) and val != val:  # NaN
+                return None
+            return val
+
+        rec_summary: Dict[str, Any] = {}
+        try:
+            recs = t.recommendations
+            if recs is not None and not recs.empty:
+                recent = recs.tail(20)
+                cols = recent.columns.tolist()
+                rec_summary = {
+                    "strong_buy": int(recent["strongBuy"].sum()) if "strongBuy" in cols else 0,
+                    "buy": int(recent["buy"].sum()) if "buy" in cols else 0,
+                    "hold": int(recent["hold"].sum()) if "hold" in cols else 0,
+                    "sell": int(recent["sell"].sum()) if "sell" in cols else 0,
+                    "strong_sell": int(recent["strongSell"].sum()) if "strongSell" in cols else 0,
+                }
+        except Exception:
+            pass
+
+        earnings_dates: List[str] = []
+        try:
+            cal = t.calendar
+            if isinstance(cal, dict):
+                dates = cal.get("Earnings Date") or []
+                for d in dates:
+                    earnings_dates.append(d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d))
+        except Exception:
+            pass
+
+        return {
+            "symbol": sym,
+            "name": info.get("longName") or info.get("shortName", sym),
+            "sector": info.get("sector"),
+            "industry": info.get("industry"),
+            "description": (info.get("longBusinessSummary") or "")[:600],
+            "country": info.get("country"),
+            "website": info.get("website"),
+            "employees": _s(info.get("fullTimeEmployees")),
+            "market_cap": _s(info.get("marketCap")),
+            "pe_trailing": _s(info.get("trailingPE")),
+            "pe_forward": _s(info.get("forwardPE")),
+            "pb_ratio": _s(info.get("priceToBook")),
+            "ps_ratio": _s(info.get("priceToSalesTrailingTwelveMonths")),
+            "ev_ebitda": _s(info.get("enterpriseToEbitda")),
+            "week52_high": _s(info.get("fiftyTwoWeekHigh")),
+            "week52_low": _s(info.get("fiftyTwoWeekLow")),
+            "day_high": _s(info.get("dayHigh")),
+            "day_low": _s(info.get("dayLow")),
+            "beta": _s(info.get("beta")),
+            "avg_volume": _s(info.get("averageVolume")),
+            "eps_trailing": _s(info.get("trailingEps")),
+            "eps_forward": _s(info.get("forwardEps")),
+            "earnings_growth": _s(info.get("earningsGrowth")),
+            "revenue_growth": _s(info.get("revenueGrowth")),
+            "earnings_dates": earnings_dates,
+            "dividend_yield": _s(info.get("dividendYield")),
+            "payout_ratio": _s(info.get("payoutRatio")),
+            "short_ratio": _s(info.get("shortRatio")),
+            "short_pct_float": _s(info.get("shortPercentOfFloat")),
+            "profit_margin": _s(info.get("profitMargins")),
+            "operating_margin": _s(info.get("operatingMargins")),
+            "gross_margin": _s(info.get("grossMargins")),
+            "roe": _s(info.get("returnOnEquity")),
+            "roa": _s(info.get("returnOnAssets")),
+            "total_revenue": _s(info.get("totalRevenue")),
+            "debt_to_equity": _s(info.get("debtToEquity")),
+            "current_ratio": _s(info.get("currentRatio")),
+            "free_cashflow": _s(info.get("freeCashflow")),
+            "analyst_count": info.get("numberOfAnalystOpinions"),
+            "recommendation_key": info.get("recommendationKey"),
+            "recommendation_mean": _s(info.get("recommendationMean")),
+            "target_high": _s(info.get("targetHighPrice")),
+            "target_low": _s(info.get("targetLowPrice")),
+            "target_mean": _s(info.get("targetMeanPrice")),
+            "target_median": _s(info.get("targetMedianPrice")),
+            "rec_summary": rec_summary,
+            "data_status": "delayed",
+        }
+
+    try:
+        result = await asyncio.wait_for(asyncio.to_thread(_fetch), timeout=15.0)
+        _fundamentals_cache[cache_key] = result
+        return result
+    except Exception as e:
+        return {"symbol": sym, "data_status": "error", "error": str(e)}

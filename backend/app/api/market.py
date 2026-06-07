@@ -4,6 +4,7 @@ from app.services.market_service import (
     get_quote, get_batch_quotes, get_indices,
     get_forex, get_commodities, get_rates,
     get_chart_data, search_symbols, get_options_chain, get_etf_holdings,
+    get_stock_fundamentals,
 )
 
 router = APIRouter(prefix="/market", tags=["market"])
@@ -64,3 +65,8 @@ async def options(symbol: str):
 @router.get("/etf/{symbol}/holdings")
 async def etf_holdings(symbol: str):
     return await get_etf_holdings(symbol.upper())
+
+
+@router.get("/fundamentals/{symbol}")
+async def fundamentals(symbol: str):
+    return await get_stock_fundamentals(symbol.upper())

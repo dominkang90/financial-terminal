@@ -51,7 +51,7 @@ def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
     abs_pct = abs(change_pct)
 
     lines = [
-        f"📊 **{name}({symbol}) 간단 분석** (규칙 기반 — Gemini API 키 없음)",
+        f"📊 **{name}({symbol}) 종목 분석**",
         f"",
         f"현재가: {cs}{price:,.{dec}f}  |  전일 대비: {'+' if change_pct > 0 else ''}{change_pct:.2f}%",
         f"",
@@ -77,8 +77,6 @@ def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
         elif pe > 40:
             lines.append("→ P/E 기준 상대적 고평가 구간입니다.")
 
-    lines.append("")
-    lines.append("*실제 AI 분석을 위해 설정에서 Gemini API 키를 입력하세요.*")
     return "\n".join(lines)
 
 
@@ -105,7 +103,7 @@ async def analyze_stock(
         return {
             "analysis": _rule_based_analysis(quote or {}, news_sentiment),
             "method": "rule_based",
-            "note": "Gemini API 키가 없어 규칙 기반 분석을 사용합니다.",
+            "note": "",
         }
 
     try:
@@ -188,14 +186,12 @@ def _rule_based_chat(message: str, context: Optional[Dict] = None) -> str:
             f"• 현재가: {cs}{price:,.{dec}f}\n"
             f"• 전일 대비: {'+' if change_pct >= 0 else ''}{change_pct:.2f}% ({direction})\n"
             f"• 거래소: {quote.get('exchange', '—')}\n\n"
-            f"더 정확한 AI 분석을 원하시면 Gemini API 키를 설정에 입력해주세요."
+            f"RSI, PER, PBR, 배당, ETF 등 투자 용어에 대해 질문해보세요!"
         )
 
     return (
         "안녕하세요! 투자 관련 질문을 도와드립니다.\n\n"
-        "현재 Gemini API 키가 없어 기본 답변만 제공됩니다.\n"
-        "RSI, PER, PBR, 52주 고가, 배당, ETF, 시가총액, 환율, 금리 등 투자 용어를 물어보시면 설명해드립니다.\n\n"
-        "더 정밀한 AI 분석을 원하시면 설정에서 Gemini API 키를 입력해주세요."
+        "RSI, PER, PBR, 52주 고가, 배당, ETF, 시가총액, 환율, 금리 등 투자 용어를 물어보시면 설명해드립니다."
     )
 
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   BarChart2, Briefcase, BookOpen, Wrench, Bot,
-  LogIn, LogOut, Settings, Bell, User, ChevronDown,
+  LogIn, LogOut, Settings, Bell, User, ChevronDown, Sun, Moon,
 } from "lucide-react";
 import type { TabId } from "@/types";
 import { useAuthStore } from "@/store/authStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { CommandBar } from "./CommandBar";
 import { IndexStrip } from "./IndexStrip";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -28,6 +29,7 @@ export const NAV_ITEMS: { id: TabId; label: string; labelKo: string; icon: typeo
 
 export function TopBar({ activeTab, onTabChange }: TopBarProps) {
   const { user, logout } = useAuthStore();
+  const { theme, setTheme } = useSettingsStore();
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -86,6 +88,13 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
             title="실시간 감시판"
           >
             <Bell size={13} />
+          </button>
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded hover:bg-terminal-border text-terminal-text-dim hover:text-terminal-accent transition-colors"
+            title={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+          >
+            {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
           </button>
           <button
             onClick={() => setShowSettings(true)}

@@ -17,7 +17,7 @@ const MOBILE_TABS: { id: TabId; label: string; icon: typeof BarChart2 }[] = [
 
 export function MobileTabBar({ activeTab, onTabChange }: Props) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0d0d0d] border-t border-[#1a1a1a] safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-terminal-panel border-t border-terminal-border safe-area-bottom">
       <div className="flex items-stretch h-14">
         {MOBILE_TABS.map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id;
@@ -26,13 +26,13 @@ export function MobileTabBar({ activeTab, onTabChange }: Props) {
               key={id}
               onClick={() => onTabChange(id)}
               className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                isActive ? "text-[#ff6600]" : "text-[#555] active:text-[#888]"
+                isActive ? "text-terminal-accent" : "text-terminal-text-dim active:text-terminal-text-secondary"
               }`}
             >
               <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
               <span className="text-2xs font-mono">{label}</span>
               {isActive && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#ff6600] rounded-full" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-terminal-accent rounded-full" />
               )}
             </button>
           );

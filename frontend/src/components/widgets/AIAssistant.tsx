@@ -10,8 +10,8 @@ interface Message {
   method?: string;
 }
 
-function buildWelcomeMessage(symbol: string, hasGemini: boolean) {
-  return `안녕하세요! 저는 FinTerminal AI 어시스턴트입니다.\n\n현재 선택된 종목: **${symbol}**\n\n종목 분석, 뉴스 요약, 투자 개념 설명 등을 도와드립니다. 무엇이든 물어보세요!\n\n${hasGemini ? "✅ Gemini API 연결됨" : "⚠️ Gemini API 키가 없어 규칙 기반 분석을 사용합니다. 설정에서 키를 입력하면 AI 분석이 가능합니다."}`;
+function buildWelcomeMessage(symbol: string) {
+  return `안녕하세요! 저는 FinTerminal AI 어시스턴트입니다.\n\n현재 선택된 종목: **${symbol}**\n\n종목 분석, 뉴스 요약, 투자 개념 설명 등을 도와드립니다. 무엇이든 물어보세요!`;
 }
 
 export function AIAssistant() {
@@ -22,7 +22,7 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: buildWelcomeMessage(activeSymbol, Boolean(geminiApiKey)),
+      content: buildWelcomeMessage(activeSymbol),
       method: "system",
     },
   ]);
@@ -45,7 +45,7 @@ export function AIAssistant() {
     setMessages((prev) => {
       if (!prev[0] || prev[0].method !== "system") return prev;
       const next = [...prev];
-      next[0] = { ...next[0], content: buildWelcomeMessage(activeSymbol, hasGemini) };
+      next[0] = { ...next[0], content: buildWelcomeMessage(activeSymbol) };
       return next;
     });
   }, [activeSymbol, hasGemini]);

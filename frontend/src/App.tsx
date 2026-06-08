@@ -15,15 +15,21 @@ import { AIPage } from "@/components/pages/AIPage";
 import { MonitorPage } from "@/components/pages/MonitorPage";
 import { HomePage } from "@/components/pages/HomePage";
 import { useAuthStore } from "@/store/authStore";
+import { useSettingsStore } from "@/store/settingsStore";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [watchlistCollapsed, setWatchlistCollapsed] = useState(false);
   const { fetchMe } = useAuthStore();
+  const { theme } = useSettingsStore();
 
   useEffect(() => {
     fetchMe();
   }, [fetchMe]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   const renderPage = () => {
     switch (activeTab) {
@@ -46,7 +52,7 @@ export default function App() {
       <main className="flex flex-1 overflow-hidden pb-14 md:pb-0">
         <aside className={`hidden md:block flex-shrink-0 border-r border-terminal-border overflow-hidden transition-all duration-200 ${watchlistCollapsed ? "w-12" : "w-56"}`}>
           {watchlistCollapsed ? (
-            <div className="flex h-full flex-col items-center gap-3 bg-[#0b0b0b] py-3">
+            <div className="flex h-full flex-col items-center gap-3 bg-terminal-bg py-3">
               <button
                 type="button"
                 onClick={() => setWatchlistCollapsed(false)}

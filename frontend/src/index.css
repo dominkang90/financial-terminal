@@ -2,33 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 터미널 스크롤바 */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #0d0d0d;
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
+/* ─── Dark Theme (기본) ──────────────────────────────────────────────────── */
+:root {
+  --t-bg:             0 0 0;
+  --t-panel:          13 13 13;
+  --t-border:         26 26 26;
+  --t-header:         17 17 17;
+  --t-accent:         255 102 0;
+  --t-accent-dim:     204 68 0;
+  --t-green:          0 204 68;
+  --t-red:            255 51 51;
+  --t-blue:           51 153 255;
+  --t-yellow:         255 204 0;
+  --t-gray:           85 85 85;
+  --t-text-primary:   224 224 224;
+  --t-text-secondary: 136 136 136;
+  --t-text-dim:       85 85 85;
+
+  --c-bg-deep:   #000;
+  --c-bg-card:   #111;
+  --c-bg-panel:  #0d0d0d;
+  --c-border:    #1a1a1a;
+  --c-border-md: #222;
+  --c-scrollbar: #333;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ─── Light Theme ─────────────────────────────────────────────────────────── */
+:root.light {
+  --t-bg:             250 249 246;
+  --t-panel:          255 255 255;
+  --t-border:         226 222 214;
+  --t-header:         242 238 231;
+  --t-accent:         220 80 0;
+  --t-accent-dim:     180 55 0;
+  --t-green:          0 148 42;
+  --t-red:            204 20 20;
+  --t-blue:           0 94 191;
+  --t-yellow:         182 118 0;
+  --t-gray:           148 148 148;
+  --t-text-primary:   26 26 26;
+  --t-text-secondary: 80 80 80;
+  --t-text-dim:       148 148 148;
+
+  --c-bg-deep:   #faf9f6;
+  --c-bg-card:   #f2efe9;
+  --c-bg-panel:  #fff;
+  --c-border:    #e2ded6;
+  --c-border-md: #d8d3c9;
+  --c-scrollbar: #c8c3b8;
 }
+
+/* ─── 하드코딩 hex → light mode 자동 오버라이드 ──────────────────────────── */
+:root.light .bg-\[\#0a0a0a\],
+:root.light .bg-\[\#0b0b0b\],
+:root.light .bg-\[\#0d0d0d\] { background-color: var(--c-bg-panel) !important; }
+
+:root.light .bg-\[\#111\],
+:root.light .bg-\[\#111111\] { background-color: var(--c-bg-card) !important; }
+
+:root.light .border-\[\#1a1a1a\],
+:root.light .border-\[\#222\]  { border-color: var(--c-border) !important; }
+
+:root.light .react-grid-item {
+  border-color: var(--c-border) !important;
+  background: var(--c-bg-panel) !important;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
   overflow: hidden;
-  background: #000;
-  color: #e0e0e0;
+  background: rgb(var(--t-bg));
+  color: rgb(var(--t-text-primary));
 }
 
 body {
@@ -37,54 +84,50 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 숫자 폰트는 항상 JetBrains Mono */
-.font-mono {
-  font-variant-numeric: tabular-nums;
-}
+.font-mono { font-variant-numeric: tabular-nums; }
 
-/* 선택 색상 */
-::selection {
-  background: rgba(255, 102, 0, 0.3);
-  color: #fff;
-}
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: var(--c-bg-deep); }
+::-webkit-scrollbar-thumb  { background: var(--c-scrollbar); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--t-gray)); }
 
-/* 트레이딩뷰 차트 컨테이너 */
-.tv-chart-container {
-  width: 100%;
-  height: 100%;
-}
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+:root       ::selection { background: rgba(255,102,0,0.3);  color: #fff; }
+:root.light  ::selection { background: rgba(220,80,0,0.25); color: #fff; }
 
-/* 애니메이션 */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.fade-in { animation: fadeIn 0.15s ease-out; }
 
-.fade-in {
-  animation: fadeIn 0.15s ease-out;
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
 }
+.live-dot { animation: livePulse 2s ease-in-out infinite; }
 
-/* 그리드 레이아웃 react-grid-layout */
-.react-grid-layout {
-  position: relative;
-}
+/* ─── Grid layout ────────────────────────────────────────────────────────── */
+.react-grid-layout { position: relative; }
 .react-grid-item {
   transition: none;
-  border: 1px solid #1a1a1a;
-  background: #0d0d0d;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-panel);
   overflow: hidden;
 }
 .react-grid-item.react-grid-placeholder {
-  background: rgba(255, 102, 0, 0.1);
-  border: 1px dashed rgba(255, 102, 0, 0.4);
+  background: rgba(255,102,0,0.1);
+  border: 1px dashed rgba(255,102,0,0.4);
 }
-.react-resizable-handle {
-  opacity: 0;
-  transition: opacity 0.15s;
+:root.light .react-grid-item.react-grid-placeholder {
+  background: rgba(220,80,0,0.08);
+  border: 1px dashed rgba(220,80,0,0.35);
 }
-.react-grid-item:hover .react-resizable-handle {
-  opacity: 1;
-}
-.react-resizable-handle::after {
-  border-color: #ff6600 !important;
-}
+.react-resizable-handle { opacity: 0; transition: opacity 0.15s; }
+.react-grid-item:hover .react-resizable-handle { opacity: 1; }
+.react-resizable-handle::after { border-color: rgb(var(--t-accent)) !important; }
+
+/* ─── TradingView ────────────────────────────────────────────────────────── */
+.tv-chart-container { width: 100%; height: 100%; }

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface SettingsState {
+  theme: "dark" | "light";
   geminiApiKey: string;
   finnhubApiKey: string;
   alpacaApiKey: string;
@@ -13,6 +14,7 @@ interface SettingsState {
   showPaperTradingBadge: boolean;
   defaultQuoteDisplay: "KRW" | "NATIVE";
   symbolCurrencyOverrides: Record<string, "KRW" | "NATIVE">;
+  setTheme: (theme: "dark" | "light") => void;
   setGeminiKey: (key: string) => void;
   setFinnhubKey: (key: string) => void;
   setAlpacaKeys: (apiKey: string, secret: string) => void;
@@ -27,6 +29,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
+      theme: "dark" as const,
       geminiApiKey: "",
       finnhubApiKey: "",
       alpacaApiKey: "",
@@ -38,6 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
       showPaperTradingBadge: true,
       defaultQuoteDisplay: "KRW",
       symbolCurrencyOverrides: {},
+      setTheme: (theme) => set({ theme }),
       setGeminiKey: (key) => set({ geminiApiKey: key }),
       setFinnhubKey: (key) => set({ finnhubApiKey: key }),
       setAlpacaKeys: (apiKey, secret) =>

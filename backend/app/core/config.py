@@ -51,7 +51,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     KAKAO_CLIENT_ID: Optional[str] = None
     KAKAO_CLIENT_SECRET: Optional[str] = None
-    OAUTH_REDIRECT_BASE_URL: str = "http://localhost:8000"  # 프로덕션에서는 실제 도메인으로 변경
+    # Render가 RENDER_EXTERNAL_URL을 자동 주입 → 별도 설정 불필요
+    OAUTH_REDIRECT_BASE_URL: str = ""
+
+    @property
+    def oauth_base(self) -> str:
+        import os
+        return os.environ.get("RENDER_EXTERNAL_URL") or self.OAUTH_REDIRECT_BASE_URL or "http://localhost:8000"
 
     # Cache TTL (seconds)
     QUOTE_CACHE_TTL: int = 15

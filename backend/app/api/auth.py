@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -192,11 +192,17 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
+def _base_url(request: Request) -> str:
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    return f"{proto}://{host}"
+
+
 @router.get("/oauth/google/start")
-async def google_oauth_start():
+async def google_oauth_start(request: Request):
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=503, detail="Google OAuth가 설정되지 않았습니다 (GOOGLE_CLIENT_ID 미설정)")
-    redirect_uri = f"{settings.oauth_base}/api/auth/oauth/google/callback"
+    redirect_uri = f"{_base_url(request)}/api/auth/oauth/google/callback"
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
         "redirect_uri": redirect_uri,
@@ -209,10 +215,10 @@ async def google_oauth_start():
 
 
 @router.get("/oauth/google/callback")
-async def google_oauth_callback(code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
+async def google_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
     if error or not code:
         return _oauth_popup_response("", error or "access_denied")
-    redirect_uri = f"{settings.oauth_base}/api/auth/oauth/google/callback"
+    redirect_uri = f"{_base_url(request)}/api/auth/oauth/google/callback"
     async with httpx.AsyncClient() as client:
         token_res = await client.post(GOOGLE_TOKEN_URL, data={
             "code": code,
@@ -244,10 +250,10 @@ KAKAO_USERINFO_URL = "https://kapi.kakao.com/v2/user/me"
 
 
 @router.get("/oauth/kakao/start")
-async def kakao_oauth_start():
+async def kakao_oauth_start(request: Request):
     if not settings.KAKAO_CLIENT_ID:
         raise HTTPException(status_code=503, detail="Kakao OAuth가 설정되지 않았습니다 (KAKAO_CLIENT_ID 미설정)")
-    redirect_uri = f"{settings.oauth_base}/api/auth/oauth/kakao/callback"
+    redirect_uri = f"{_base_url(request)}/api/auth/oauth/kakao/callback"
     params = {
         "client_id": settings.KAKAO_CLIENT_ID,
         "redirect_uri": redirect_uri,
@@ -258,10 +264,10 @@ async def kakao_oauth_start():
 
 
 @router.get("/oauth/kakao/callback")
-async def kakao_oauth_callback(code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
+async def kakao_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
     if error or not code:
         return _oauth_popup_response("", error or "access_denied")
-    redirect_uri = f"{settings.oauth_base}/api/auth/oauth/kakao/callback"
+    redirect_uri = f"{_base_url(request)}/api/auth/oauth/kakao/callback"
     async with httpx.AsyncClient() as client:
         token_res = await client.post(KAKAO_TOKEN_URL, data={
             "grant_type": "authorization_code",

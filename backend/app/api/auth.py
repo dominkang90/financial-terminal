@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
@@ -135,23 +135,12 @@ async def update_settings(
 
 # ─── OAuth 공통 헬퍼 ────────────────────────────────────────────────────────
 
-def _oauth_popup_response(token: str, error: str | None = None) -> HTMLResponse:
-    """팝업 창에서 부모 창으로 결과를 전달하는 HTML 응답"""
-    if error:
-        script = f"""
-        <script>
-          window.opener && window.opener.postMessage({{type:'oauth_error',error:{error!r}}}, '*');
-          window.close();
-        </script>
-        """
-    else:
-        script = f"""
-        <script>
-          window.opener && window.opener.postMessage({{type:'oauth_success',token:{token!r}}}, '*');
-          window.close();
-        </script>
-        """
-    return HTMLResponse(f"<html><body>{script}</body></html>")
+def _oauth_frontend_redirect(token: str = "", error: str | None = None) -> RedirectResponse:
+    """OAuth 결과를 프론트엔드 현재 탭으로 돌려보낸다."""
+    params = {"oauth_error": error} if error else {"oauth_token": token}
+    fragment = urllib.parse.urlencode(params)
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    return RedirectResponse(f"{frontend_url}/#{fragment}")
 
 
 async def _find_or_create_oauth_user(
@@ -218,7 +207,7 @@ async def google_oauth_start(request: Request):
 @router.get("/oauth/google/callback")
 async def google_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
     if error or not code:
-        return _oauth_popup_response("", error or "access_denied")
+        return _oauth_frontend_redirect("", error or "access_denied")
     redirect_uri = f"{_base_url(request)}/api/auth/oauth/google/callback"
     async with httpx.AsyncClient() as client:
         token_res = await client.post(GOOGLE_TOKEN_URL, data={
@@ -229,18 +218,18 @@ async def google_oauth_callback(request: Request, code: str | None = None, error
             "grant_type": "authorization_code",
         })
         if token_res.status_code != 200:
-            return _oauth_popup_response("", "token_exchange_failed")
+            return _oauth_frontend_redirect("", "token_exchange_failed")
         access_token = token_res.json().get("access_token")
         info_res = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
         if info_res.status_code != 200:
-            return _oauth_popup_response("", "userinfo_failed")
+            return _oauth_frontend_redirect("", "userinfo_failed")
         info = info_res.json()
 
     email = info.get("email", "")
     name = info.get("name", "") or email.split("@")[0]
     user = await _find_or_create_oauth_user(db, email, name, "google")
     jwt = create_access_token(user.id)
-    return _oauth_popup_response(jwt)
+    return _oauth_frontend_redirect(jwt)
 
 
 # ─── Kakao OAuth ────────────────────────────────────────────────────────────
@@ -267,7 +256,7 @@ async def kakao_oauth_start(request: Request):
 @router.get("/oauth/kakao/callback")
 async def kakao_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
     if error or not code:
-        return _oauth_popup_response("", error or "access_denied")
+        return _oauth_frontend_redirect("", error or "access_denied")
     redirect_uri = f"{_base_url(request)}/api/auth/oauth/kakao/callback"
     async with httpx.AsyncClient() as client:
         token_res = await client.post(KAKAO_TOKEN_URL, data={
@@ -278,11 +267,11 @@ async def kakao_oauth_callback(request: Request, code: str | None = None, error:
             **({"client_secret": settings.KAKAO_CLIENT_SECRET} if settings.KAKAO_CLIENT_SECRET else {}),
         })
         if token_res.status_code != 200:
-            return _oauth_popup_response("", "token_exchange_failed")
+            return _oauth_frontend_redirect("", "token_exchange_failed")
         access_token = token_res.json().get("access_token")
         info_res = await client.get(KAKAO_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
         if info_res.status_code != 200:
-            return _oauth_popup_response("", "userinfo_failed")
+            return _oauth_frontend_redirect("", "userinfo_failed")
         info = info_res.json()
 
     kakao_account = info.get("kakao_account", {})
@@ -290,4 +279,4 @@ async def kakao_oauth_callback(request: Request, code: str | None = None, error:
     nickname = info.get("properties", {}).get("nickname", "") or str(info["id"])
     user = await _find_or_create_oauth_user(db, email, nickname, "kakao")
     jwt = create_access_token(user.id)
-    return _oauth_popup_response(jwt)
+    return _oauth_frontend_redirect(jwt)

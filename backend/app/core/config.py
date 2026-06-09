@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     KAKAO_CLIENT_ID: Optional[str] = None
     KAKAO_CLIENT_SECRET: Optional[str] = None
     OAUTH_REDIRECT_BASE_URL: str = ""  # 미사용 — auth.py가 Request에서 직접 감지
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # Cache TTL (seconds)
     QUOTE_CACHE_TTL: int = 15

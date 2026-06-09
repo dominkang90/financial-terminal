@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import type { TabId } from "@/types";
 import { TopBar } from "@/components/TopBar/TopBar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
@@ -25,6 +25,23 @@ export default function App() {
   const { theme } = useSettingsStore();
 
   useEffect(() => {
+    const oauthParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const oauthToken = oauthParams.get("oauth_token");
+    const oauthError = oauthParams.get("oauth_error");
+
+    if (oauthToken) {
+      localStorage.setItem("access_token", oauthToken);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      fetchMe().then(() => toast.success("소셜 로그인 성공!"));
+      return;
+    }
+
+    if (oauthError) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      toast.error("소셜 로그인에 실패했습니다");
+      return;
+    }
+
     fetchMe();
   }, [fetchMe]);
 

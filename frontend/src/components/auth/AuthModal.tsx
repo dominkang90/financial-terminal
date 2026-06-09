@@ -7,26 +7,7 @@ interface Props {
   onClose: () => void;
 }
 
-const BACKEND = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-function openOAuthPopup(provider: "google" | "kakao", onToken: (token: string) => void) {
-  const url = `${BACKEND}/api/auth/oauth/${provider}/start`;
-  const popup = window.open(url, `${provider}_oauth`, "width=520,height=620,left=400,top=100");
-  if (!popup) {
-    toast.error("팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.");
-    return;
-  }
-  const handler = (e: MessageEvent) => {
-    if (e.data?.type === "oauth_success") {
-      window.removeEventListener("message", handler);
-      onToken(e.data.token);
-    } else if (e.data?.type === "oauth_error") {
-      window.removeEventListener("message", handler);
-      toast.error("소셜 로그인에 실패했습니다");
-    }
-  };
-  window.addEventListener("message", handler);
-}
+const BACKEND = import.meta.env.VITE_API_URL || "";
 
 export function AuthModal({ onClose }: Props) {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -34,7 +15,7 @@ export function AuthModal({ onClose }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const { login, register, isLoading, fetchMe } = useAuthStore();
+  const { login, register, isLoading } = useAuthStore();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,12 +35,7 @@ export function AuthModal({ onClose }: Props) {
   };
 
   const handleOAuth = (provider: "google" | "kakao") => {
-    openOAuthPopup(provider, async (token) => {
-      localStorage.setItem("access_token", token);
-      await fetchMe();
-      toast.success("소셜 로그인 성공!");
-      onClose();
-    });
+    window.location.href = `${BACKEND}/api/auth/oauth/${provider}/start`;
   };
 
   return (

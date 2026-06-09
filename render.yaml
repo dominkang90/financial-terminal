@@ -17,6 +17,8 @@ services:
         value: "false"
       - key: OAUTH_REDIRECT_BASE_URL
         value: "https://financial-terminal-p909.onrender.com"
+      - key: FRONTEND_URL
+        value: "https://financial-terminal-psi.vercel.app"
       # 아래는 Render 대시보드 Environment에서 직접 입력하세요 (보안)
       # - key: GEMINI_API_KEY
       # - key: FINNHUB_API_KEY

@@ -198,19 +198,6 @@ def _base_url(request: Request) -> str:
     return f"{proto}://{host}"
 
 
-@router.get("/oauth/debug-headers")
-async def debug_headers(request: Request):
-    """임시 디버그: Render 헤더 확인용"""
-    return {
-        "url": str(request.url),
-        "base_url": str(request.base_url),
-        "host": request.headers.get("host"),
-        "x-forwarded-proto": request.headers.get("x-forwarded-proto"),
-        "x-forwarded-host": request.headers.get("x-forwarded-host"),
-        "x-forwarded-for": request.headers.get("x-forwarded-for"),
-        "_base_url_result": _base_url(request),
-    }
-
 
 @router.get("/oauth/google/start")
 async def google_oauth_start(request: Request):

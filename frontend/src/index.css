@@ -28,44 +28,81 @@
 }
 
 /* ─── Light Theme ─────────────────────────────────────────────────────────── */
+/* 디자인 원칙: 쿨톤 밝은 회색 배경, 순백 패널, 높은 대비, 선명한 금융 색상 */
 :root.light {
-  --t-bg:             250 249 246;
-  --t-panel:          255 255 255;
-  --t-border:         226 222 214;
-  --t-header:         242 238 231;
-  --t-accent:         220 80 0;
-  --t-accent-dim:     180 55 0;
-  --t-green:          0 148 42;
-  --t-red:            204 20 20;
-  --t-blue:           0 94 191;
-  --t-yellow:         182 118 0;
-  --t-gray:           148 148 148;
-  --t-text-primary:   26 26 26;
-  --t-text-secondary: 80 80 80;
-  --t-text-dim:       148 148 148;
+  /* 배경 — 쿨 라이트 그레이 계열 */
+  --t-bg:             242 243 248;   /* #f2f3f8 */
+  --t-panel:          255 255 255;   /* #ffffff */
+  --t-border:         216 219 230;   /* #d8dbe6 */
+  --t-header:         235 237 245;   /* #ebedf5 */
 
-  --c-bg-deep:   #faf9f6;
-  --c-bg-card:   #f2efe9;
-  --c-bg-panel:  #fff;
-  --c-border:    #e2ded6;
-  --c-border-md: #d8d3c9;
-  --c-scrollbar: #c8c3b8;
+  /* 포인트 색상 — 라이트 배경에서도 선명한 오렌지 */
+  --t-accent:         215 68 0;      /* #d74400 */
+  --t-accent-dim:     175 52 0;      /* #af3400 */
+
+  /* 금융 시맨틱 — WCAG AA 이상 대비 확보 */
+  --t-green:          21 128 61;     /* #15803d  Tailwind green-700 */
+  --t-red:            185 28 28;     /* #b91c1c  Tailwind red-700 */
+  --t-blue:           29 78 216;     /* #1d4ed8  Tailwind blue-700 */
+  --t-yellow:         146 64 14;     /* #92400e  Tailwind amber-800 */
+  --t-gray:           100 116 139;   /* #64748b  Tailwind slate-500 */
+
+  /* 텍스트 — 슬레이트 계열, 명확한 계층 */
+  --t-text-primary:   15 23 42;      /* #0f172a  Tailwind slate-900 */
+  --t-text-secondary: 51 65 85;      /* #334155  Tailwind slate-700 */
+  --t-text-dim:       148 163 184;   /* #94a3b8  Tailwind slate-400 */
+
+  --c-bg-deep:   #f2f3f8;
+  --c-bg-card:   #f8f9fc;
+  --c-bg-panel:  #ffffff;
+  --c-border:    #d8dbe6;
+  --c-border-md: #c8ccdb;
+  --c-scrollbar: #a8afc4;
 }
 
 /* ─── 하드코딩 hex → light mode 자동 오버라이드 ──────────────────────────── */
 :root.light .bg-\[\#0a0a0a\],
 :root.light .bg-\[\#0b0b0b\],
+:root.light .bg-\[\#0c0c0c\],
 :root.light .bg-\[\#0d0d0d\] { background-color: var(--c-bg-panel) !important; }
 
 :root.light .bg-\[\#111\],
-:root.light .bg-\[\#111111\] { background-color: var(--c-bg-card) !important; }
+:root.light .bg-\[\#111111\],
+:root.light .bg-\[\#131313\] { background-color: var(--c-bg-card) !important; }
+
+:root.light .bg-\[\#000\],
+:root.light .bg-black { background-color: var(--c-bg-deep) !important; }
 
 :root.light .border-\[\#1a1a1a\],
-:root.light .border-\[\#222\]  { border-color: var(--c-border) !important; }
+:root.light .border-\[\#222\],
+:root.light .border-\[\#333\]  { border-color: var(--c-border) !important; }
+
+:root.light .text-\[\#e0e0e0\],
+:root.light .text-\[\#ccc\]    { color: rgb(var(--t-text-primary)) !important; }
+
+:root.light .text-\[\#888\],
+:root.light .text-\[\#999\]    { color: rgb(var(--t-text-secondary)) !important; }
+
+:root.light .text-\[\#555\],
+:root.light .text-\[\#666\]    { color: rgb(var(--t-text-dim)) !important; }
+
+/* toast 알림 라이트 모드 스타일 */
+:root.light [data-hot-toast] {
+  background: #ffffff !important;
+  color: rgb(var(--t-text-primary)) !important;
+  border-color: var(--c-border) !important;
+}
 
 :root.light .react-grid-item {
   border-color: var(--c-border) !important;
   background: var(--c-bg-panel) !important;
+}
+
+/* 라이트 모드 입력창/선택박스 배경 */
+:root.light input,
+:root.light select,
+:root.light textarea {
+  color-scheme: light;
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */

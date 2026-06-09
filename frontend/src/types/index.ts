@@ -207,4 +207,5 @@ export type TabId =
   | "options"
   | "ai"
   | "orders"
-  | "monitor";
+  | "monitor"
+  | "admin";

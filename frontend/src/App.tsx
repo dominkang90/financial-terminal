@@ -14,6 +14,7 @@ import { OrdersPage } from "@/components/pages/OrdersPage";
 import { AIPage } from "@/components/pages/AIPage";
 import { MonitorPage } from "@/components/pages/MonitorPage";
 import { HomePage } from "@/components/pages/HomePage";
+import { AdminPage } from "@/components/pages/AdminPage";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
 
@@ -42,6 +43,7 @@ export default function App() {
       case "orders": return <OrdersPage />;
       case "ai": return <AIPage />;
       case "monitor": return <MonitorPage />;
+      case "admin": return <AdminPage />;
       default: return <HomePage />;
     }
   };
@@ -90,14 +92,15 @@ export default function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: "#111",
-            color: "#e0e0e0",
-            border: "1px solid #1a1a1a",
+            background: theme === "light" ? "#ffffff" : "#111111",
+            color: theme === "light" ? "#0f172a" : "#e0e0e0",
+            border: theme === "light" ? "1px solid #d8dbe6" : "1px solid #1a1a1a",
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: "11px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           },
-          success: { iconTheme: { primary: "#00cc44", secondary: "#000" } },
-          error: { iconTheme: { primary: "#ff3333", secondary: "#fff" } },
+          success: { iconTheme: { primary: "#16a34a", secondary: "#fff" } },
+          error: { iconTheme: { primary: "#b91c1c", secondary: "#fff" } },
         }}
       />
     </div>

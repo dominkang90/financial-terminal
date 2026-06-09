@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     KIS_APP_KEY: Optional[str] = None  # 한국투자증권
     KIS_APP_SECRET: Optional[str] = None
 
+    # OAuth
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    KAKAO_CLIENT_ID: Optional[str] = None
+    KAKAO_CLIENT_SECRET: Optional[str] = None
+    OAUTH_REDIRECT_BASE_URL: str = "http://localhost:8000"  # 프로덕션에서는 실제 도메인으로 변경
+
     # Cache TTL (seconds)
     QUOTE_CACHE_TTL: int = 15
     NEWS_CACHE_TTL: int = 300

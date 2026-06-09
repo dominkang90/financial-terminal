@@ -15,8 +15,12 @@ services:
         value: '["https://financial-terminal-psi.vercel.app","https://*.vercel.app","https://financial-terminal-p909.onrender.com"]'
       - key: DEBUG
         value: "false"
-      # 아래는 Render 대시보드에서 직접 입력하세요
+      - key: OAUTH_REDIRECT_BASE_URL
+        value: "https://financial-terminal-p909.onrender.com"
+      # 아래는 Render 대시보드 Environment에서 직접 입력하세요 (보안)
       # - key: GEMINI_API_KEY
-      #   value: YOUR_GEMINI_KEY
       # - key: FINNHUB_API_KEY
-      #   value: YOUR_FINNHUB_KEY
+      # - key: GOOGLE_CLIENT_ID
+      # - key: GOOGLE_CLIENT_SECRET
+      # - key: KAKAO_CLIENT_ID
+      # - key: KAKAO_CLIENT_SECRET

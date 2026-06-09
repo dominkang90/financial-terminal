@@ -134,9 +134,10 @@ export function WatchList() {
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeFromWatchlist(symbol); }}
-                  className="opacity-0 group-hover:opacity-100 text-terminal-text-dim hover:text-terminal-red ml-1"
+                  title="삭제"
+                  className="opacity-30 group-hover:opacity-100 text-terminal-text-dim hover:text-terminal-red transition-opacity ml-1 flex-shrink-0"
                 >
-                  <X size={9} />
+                  <X size={10} />
                 </button>
               </div>
             </div>

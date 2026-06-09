@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BarChart2, Briefcase, BookOpen, Wrench, Bot,
+  BarChart2, Briefcase, BookOpen, Wrench, Bot, Shield,
   LogIn, LogOut, Settings, Bell, User, ChevronDown, Sun, Moon,
 } from "lucide-react";
 import type { TabId } from "@/types";
@@ -25,6 +25,7 @@ export const NAV_ITEMS: { id: TabId; label: string; labelKo: string; icon: typeo
   { id: "options", label: "Options", labelKo: "옵션", icon: Wrench },
   { id: "orders", label: "Orders", labelKo: "주문", icon: Wrench },
   { id: "ai", label: "AI", labelKo: "AI", icon: Bot },
+  { id: "admin", label: "Admin", labelKo: "관리자", icon: Shield },
 ];
 
 export function TopBar({ activeTab, onTabChange }: TopBarProps) {

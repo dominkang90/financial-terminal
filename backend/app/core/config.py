@@ -57,7 +57,10 @@ class Settings(BaseSettings):
     @property
     def oauth_base(self) -> str:
         import os
-        return os.environ.get("RENDER_EXTERNAL_URL") or self.OAUTH_REDIRECT_BASE_URL or "http://localhost:8000"
+        hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+        if hostname:
+            return f"https://{hostname}"
+        return self.OAUTH_REDIRECT_BASE_URL or "http://localhost:8000"
 
     # Cache TTL (seconds)
     QUOTE_CACHE_TTL: int = 15

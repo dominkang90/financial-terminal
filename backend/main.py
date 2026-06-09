@@ -53,4 +53,8 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": settings.APP_VERSION}
+    return {
+        "status": "ok",
+        "version": settings.APP_VERSION,
+        "frontend_url": settings.FRONTEND_URL,
+    }

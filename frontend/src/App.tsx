@@ -21,18 +21,24 @@ import { useSettingsStore } from "@/store/settingsStore";
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [watchlistCollapsed, setWatchlistCollapsed] = useState(false);
-  const { fetchMe } = useAuthStore();
+  const { fetchMe, finishOAuthLogin } = useAuthStore();
   const { theme } = useSettingsStore();
 
   useEffect(() => {
     const oauthParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const oauthToken = oauthParams.get("oauth_token");
+    const oauthUser = oauthParams.get("oauth_user");
     const oauthError = oauthParams.get("oauth_error");
 
     if (oauthToken) {
-      localStorage.setItem("access_token", oauthToken);
+      let user;
+      try {
+        user = oauthUser ? JSON.parse(oauthUser) : undefined;
+      } catch {
+        user = undefined;
+      }
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      fetchMe().then(() => toast.success("소셜 로그인 성공!"));
+      finishOAuthLogin(oauthToken, user).then(() => toast.success("소셜 로그인 성공!"));
       return;
     }
 
@@ -43,7 +49,7 @@ export default function App() {
     }
 
     fetchMe();
-  }, [fetchMe]);
+  }, [fetchMe, finishOAuthLogin]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");

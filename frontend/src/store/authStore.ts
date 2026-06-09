@@ -11,6 +11,7 @@ interface AuthState {
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => void;
   fetchMe: () => Promise<void>;
+  finishOAuthLogin: (token: string, user?: User) => Promise<void>;
   updateSettings: (data: Record<string, unknown>) => Promise<void>;
 }
 
@@ -61,6 +62,14 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           localStorage.removeItem("access_token");
           set({ user: null, accessToken: null });
+        }
+      },
+
+      finishOAuthLogin: async (token, user) => {
+        localStorage.setItem("access_token", token);
+        set({ accessToken: token, user: user ?? null });
+        if (!user) {
+          await get().fetchMe();
         }
       },
 

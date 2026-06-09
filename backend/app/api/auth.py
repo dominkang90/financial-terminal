@@ -5,6 +5,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import httpx
+import json
 import logging
 import secrets
 import urllib.parse
@@ -137,9 +138,16 @@ async def update_settings(
 
 # ─── OAuth 공통 헬퍼 ────────────────────────────────────────────────────────
 
-def _oauth_frontend_redirect(request: Request, token: str = "", error: str | None = None) -> RedirectResponse:
+def _oauth_frontend_redirect(
+    request: Request,
+    token: str = "",
+    error: str | None = None,
+    user: dict | None = None,
+) -> RedirectResponse:
     """OAuth 결과를 프론트엔드 현재 탭으로 돌려보낸다."""
     params = {"oauth_error": error} if error else {"oauth_token": token}
+    if user:
+        params["oauth_user"] = json.dumps(user, separators=(",", ":"))
     fragment = urllib.parse.urlencode(params)
     frontend_url = settings.FRONTEND_URL.rstrip("/")
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
@@ -240,7 +248,18 @@ async def google_oauth_callback(request: Request, code: str | None = None, error
         name = info.get("name", "") or email.split("@")[0]
         user = await _find_or_create_oauth_user(db, email, name, "google")
         jwt = create_access_token(user.id)
-        return _oauth_frontend_redirect(request, token=jwt)
+        return _oauth_frontend_redirect(
+            request,
+            token=jwt,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "settings": user.settings or {},
+                "watchlist": user.watchlist or [],
+                "layout_config": user.layout_config or {},
+            },
+        )
     except Exception:
         logger.exception("Google OAuth callback failed")
         return _oauth_frontend_redirect(request, error="server_error")

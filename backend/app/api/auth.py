@@ -5,6 +5,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import httpx
+import logging
 import secrets
 import urllib.parse
 
@@ -17,6 +18,7 @@ from app.core.config import settings
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 class RegisterRequest(BaseModel):
@@ -209,30 +211,39 @@ async def google_oauth_start(request: Request):
 
 @router.get("/oauth/google/callback")
 async def google_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
-    if error or not code:
-        return _oauth_frontend_redirect(request, error=error or "access_denied")
-    redirect_uri = f"{_base_url(request)}/api/auth/oauth/google/callback"
-    async with httpx.AsyncClient() as client:
-        token_res = await client.post(GOOGLE_TOKEN_URL, data={
-            "code": code,
-            "client_id": settings.GOOGLE_CLIENT_ID,
-            "client_secret": settings.GOOGLE_CLIENT_SECRET,
-            "redirect_uri": redirect_uri,
-            "grant_type": "authorization_code",
-        })
-        if token_res.status_code != 200:
-            return _oauth_frontend_redirect(request, error="token_exchange_failed")
-        access_token = token_res.json().get("access_token")
-        info_res = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
-        if info_res.status_code != 200:
-            return _oauth_frontend_redirect(request, error="userinfo_failed")
-        info = info_res.json()
+    try:
+        if error or not code:
+            return _oauth_frontend_redirect(request, error=error or "access_denied")
+        redirect_uri = f"{_base_url(request)}/api/auth/oauth/google/callback"
+        async with httpx.AsyncClient() as client:
+            token_res = await client.post(GOOGLE_TOKEN_URL, data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            })
+            if token_res.status_code != 200:
+                logger.warning("Google OAuth token exchange failed: %s", token_res.text[:500])
+                return _oauth_frontend_redirect(request, error="token_exchange_failed")
+            access_token = token_res.json().get("access_token")
+            info_res = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
+            if info_res.status_code != 200:
+                logger.warning("Google OAuth userinfo failed: %s", info_res.text[:500])
+                return _oauth_frontend_redirect(request, error="userinfo_failed")
+            info = info_res.json()
 
-    email = info.get("email", "")
-    name = info.get("name", "") or email.split("@")[0]
-    user = await _find_or_create_oauth_user(db, email, name, "google")
-    jwt = create_access_token(user.id)
-    return _oauth_frontend_redirect(request, token=jwt)
+        email = info.get("email", "")
+        if not email:
+            logger.warning("Google OAuth userinfo had no email")
+            return _oauth_frontend_redirect(request, error="email_missing")
+        name = info.get("name", "") or email.split("@")[0]
+        user = await _find_or_create_oauth_user(db, email, name, "google")
+        jwt = create_access_token(user.id)
+        return _oauth_frontend_redirect(request, token=jwt)
+    except Exception:
+        logger.exception("Google OAuth callback failed")
+        return _oauth_frontend_redirect(request, error="server_error")
 
 
 # ─── Kakao OAuth ────────────────────────────────────────────────────────────

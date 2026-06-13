@@ -199,6 +199,7 @@ def _extract_tickers(text: str) -> List[str]:
         "CEO", "CFO", "SEC", "ETF", "IPO", "FED", "GDP", "CPI", "PCE", "US",
         "WILL", "FROM", "WITH", "THIS", "THAT", "THEY", "BEEN", "HAVE", "AI",
         "INTO", "OVER", "THAN", "THEN", "WHEN", "WHAT", "SAYS", "SAID",
+        "EP", "UK", "X", "TV", "CEO", "GRAND", "OPEN", "SPAX",
     }
     return list(dict.fromkeys(t for t in tickers if t not in stopwords and len(t) >= 2))[:5]
 
@@ -299,11 +300,12 @@ def _is_promotional_sentence(text: str) -> bool:
     lowered = (text or "").lower()
     promo_tokens = [
         "구독", "좋아요", "알림", "멤버십", "문의", "프리미엄", "이벤트", "구매", "할인", "링크", "바로가기",
-        "subscribe", "membership", "discount", "shop", "shopping",
+        "매수 인증", "grand open", "비밀링크", "셔츠", "디퓨저", "쿠폰", "무료체험", "오픈채팅",
+        "subscribe", "membership", "discount", "shop", "shopping", "coupon", "promo",
     ]
     if "http" in lowered or "bit.ly" in lowered or "abr.ge" in lowered:
         return True
-    if sum(token in lowered for token in promo_tokens) >= 2:
+    if any(token in lowered for token in promo_tokens):
         return True
     return False
 
@@ -916,21 +918,84 @@ def _extract_topic_tags(text: str, topic: str, base_tags: Optional[List[str]] = 
 
 def _build_video_insight(title: str, summary: str, content_text: Optional[str], source: str, topic: str, tags: List[str], content_basis: str = "none") -> str:
     tag_text = ", ".join(tags[:3]) if tags else TOPIC_LABELS.get(topic, topic)
-    analysis_source = (content_text or (title if content_basis == "none" else summary) or title or "").strip()
+    analysis_source = (content_text or (summary if content_basis != "none" else title) or title or "").strip()
     focus_sentences = _pick_focus_sentences(analysis_source, limit=2)
     primary = focus_sentences[0] if focus_sentences else title.strip()
     secondary = focus_sentences[1] if len(focus_sentences) > 1 else ""
 
     if content_basis == "transcript":
-        prefix = "자막 기준 핵심"
+        prefix = "자막에서 확인한 핵심"
     elif content_basis == "video_ai":
-        prefix = "영상 AI 요약 기준 핵심"
+        prefix = "영상 AI가 확인한 핵심"
     else:
-        prefix = "제목·설명 기준 핵심"
+        prefix = "제목·설명으로 추정한 핵심"
 
     if secondary:
-        return f"{prefix}: {primary}. 이어서 {secondary}. 체크할 분야는 {tag_text}입니다."
-    return f"{prefix}: {primary}. 체크할 분야는 {tag_text}입니다."
+        return f"{prefix}: {primary}. 추가로 {secondary}. 지금 봐야 할 분야는 {tag_text}입니다."
+    return f"{prefix}: {primary}. 지금 봐야 할 분야는 {tag_text}입니다."
+
+
+def _build_investment_points(
+    title: str,
+    summary: str,
+    content_text: Optional[str],
+    sentiment: str,
+    topic: str,
+    tags: List[str],
+    tickers: List[str],
+    content_basis: str,
+) -> List[str]:
+    """영상 카드/상세보기에서 바로 쓸 수 있는 투자 체크포인트를 만든다."""
+    analysis_text = f"{title} {summary if content_basis != 'none' else ''} {content_text or ''}".lower()
+    focus = _pick_focus_sentences(content_text or (summary if content_basis != "none" else title) or title, limit=2)
+    target = ", ".join(f"${ticker}" for ticker in tickers[:3]) or ", ".join(tags[:3]) or TOPIC_LABELS.get(topic, topic)
+    basis_label = {
+        "transcript": "자막 기준",
+        "video_ai": "영상 AI 기준",
+        "none": "제목·설명 기준",
+    }.get(content_basis, "제목·설명 기준")
+
+    points: List[str] = []
+    if focus:
+        points.append(f"{basis_label}으로 보면 핵심은 ‘{focus[0]}’입니다.")
+
+    if any(token in analysis_text for token in ["금리", "연준", "fed", "cpi", "ppi", "고용", "국채", "달러", "환율"]):
+        points.append("금리·환율·고용 같은 거시 지표가 주가 방향을 흔들 수 있으니, 오늘 장에서는 지수와 달러 움직임을 같이 보세요.")
+    if any(token in analysis_text for token in ["실적", "매출", "영업이익", "가이던스", "어닝", "margin", "revenue"]):
+        points.append("실적 이야기라면 매출보다 ‘앞으로의 예상치’가 더 중요합니다. 다음 분기 가이던스가 올라갔는지 확인하세요.")
+    if any(token in analysis_text for token in ["반도체", "ai", "엔비디아", "hbm", "데이터센터", "sk하이닉스", "삼성전자"]):
+        points.append("AI·반도체 이슈는 한 종목만 보지 말고 GPU, 메모리, 전력, 장비주까지 같이 움직이는지 확인하세요.")
+    if any(token in analysis_text for token in ["테슬라", "전기차", "2차전지", "배터리", "리튬"]):
+        points.append("전기차·배터리 이슈는 판매량, 가격 인하, 원재료 가격이 함께 움직이는지 보는 게 좋습니다.")
+
+    if sentiment == "positive":
+        points.append(f"긍정 톤이지만 바로 추격 매수보다 {target} 관련 종목·섹터의 거래량과 전고점 돌파 여부를 먼저 확인하세요.")
+    elif sentiment == "negative":
+        points.append(f"부정 톤이 강합니다. {target} 관련 종목·섹터는 손절 기준과 지지선이 보일 때까지 무리한 진입을 피하세요.")
+    else:
+        points.append(f"방향이 애매합니다. {target} 관련 종목·섹터는 뉴스보다 실제 가격·거래량 반응이 나오는지 먼저 확인하세요.")
+
+    if len(points) < 3 and len(focus) > 1:
+        points.append(f"추가로 볼 문장: {focus[1]}")
+
+    # 중복 제거 후 4개까지만 제공
+    return list(dict.fromkeys(points))[:4]
+
+
+def _build_risk_points(title: str, summary: str, content_text: Optional[str], topic: str, content_basis: str) -> List[str]:
+    analysis_text = f"{title} {summary} {content_text or ''}".lower()
+    risks: List[str] = []
+    if content_basis == "none":
+        risks.append("자막을 못 가져온 영상이라 실제 발언과 다를 수 있습니다. 원문 영상을 꼭 같이 확인하세요.")
+    if any(token in analysis_text for token in ["속보", "긴급", "breaking"]):
+        risks.append("속보성 영상은 내용이 빠르게 바뀔 수 있어, 같은 주제의 다른 출처도 같이 확인해야 합니다.")
+    if any(token in analysis_text for token in ["금리", "연준", "fed", "cpi", "고용"]):
+        risks.append("거시 지표는 발표 직후 변동성이 커질 수 있어, 포지션 크기를 작게 잡는 편이 안전합니다.")
+    if topic in {"semis-ai", "global-tech", "ev-battery"}:
+        risks.append("테마주는 기대감이 먼저 오르고 실적 확인이 늦을 수 있어, 과열 구간 추격을 조심하세요.")
+    if not risks:
+        risks.append("영상 하나만으로 매수·매도 결정을 내리지 말고 가격, 거래량, 다른 뉴스까지 함께 확인하세요.")
+    return risks[:3]
 
 
 def _sentiment_to_stance(sentiment: str) -> str:
@@ -1119,7 +1184,14 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     # 서버 재시작 후에도 디스크 캐시에서 빠르게 복원
     if topic == "all":
         disk_data = _load_disk_cache()
-        if disk_data:
+        cached_videos = disk_data.get("videos", []) if isinstance(disk_data, dict) else []
+        cache_has_new_insights = (
+            isinstance(disk_data, dict)
+            and disk_data.get("cache_version") == 2
+            and bool(cached_videos)
+            and all("investment_points" in video and "risk_points" in video for video in cached_videos[:3])
+        )
+        if disk_data and cache_has_new_insights:
             _news_cache[cache_key] = disk_data
             return disk_data
 
@@ -1159,9 +1231,12 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                     content_text = None
                     content_basis = "none"
             content_excerpt = _pick_focus_sentences(content_text or summary, limit=3)
-            analysis_text = _compact_text(f"{title} {summary} {content_text or ''}", max_len=3000)
+            summary_for_analysis = " ".join(_pick_focus_sentences(summary, limit=3)) if summary else ""
+            analysis_text = _compact_text(f"{title} {summary_for_analysis} {content_text or ''}", max_len=3000)
             detected_topic = _detect_topic(analysis_text, channel.get("topic_hint"))
             tags = _extract_topic_tags(analysis_text, detected_topic, channel.get("tags"))
+            tickers = _extract_tickers(analysis_text)
+            sentiment = _sentiment_score(analysis_text)
             channel_videos.append({
                 "id": entry.get("yt_videoid", video_id or entry.get("id", link)),
                 "title": title,
@@ -1177,8 +1252,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 "video_url": link,
                 "video_thumbnail": f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" if video_id else None,
                 "media_type": "video",
-                "tickers": _extract_tickers(analysis_text),
-                "sentiment": _sentiment_score(analysis_text),
+                "tickers": tickers,
+                "sentiment": sentiment,
                 "importance": "high" if any(k in analysis_text.lower() for k in ["속보", "긴급", "fed", "금리", "실적", "반도체"]) else "normal",
                 "data_source": "youtube_rss",
                 "topic": detected_topic,
@@ -1195,6 +1270,8 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 "content_basis": content_basis,
                 "transcript_excerpt": " ".join(content_excerpt) if content_excerpt else content_text,
                 "insight": _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
+                "investment_points": _build_investment_points(title, summary, content_text, sentiment, detected_topic, tags, tickers, content_basis),
+                "risk_points": _build_risk_points(title, summary, content_text, detected_topic, content_basis),
             })
         return channel_videos
 
@@ -1210,6 +1287,7 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     market_score = _build_market_score(trimmed)
     channel_consensus = _build_channel_consensus(trimmed)
     result = {
+        "cache_version": 2,
         "videos": trimmed,
         "topics": [{"id": key, "label": value} for key, value in TOPIC_LABELS.items()],
         "tier_filters": _build_filter_counts(trimmed, "tier", "tier_label"),

@@ -80,10 +80,19 @@ function splitBullets(...inputs: Array<string | undefined | null>) {
 }
 
 function buildActionBullets(article: NewsArticle) {
+  if (article.investment_points?.length) return article.investment_points.slice(0, 4);
   const bullets = splitBullets(article.transcript_excerpt, article.insight);
   if (bullets.length > 0) return bullets.slice(0, 3);
   if (article.summary_ko || article.summary) return splitBullets(article.summary_ko, article.summary).slice(0, 3);
   return ["제목 기준으로 시장 관련성을 확인했습니다.", "영상 열기 버튼으로 원문 내용을 함께 확인해 주세요."];
+}
+
+function buildRiskBullets(article: NewsArticle) {
+  if (article.risk_points?.length) return article.risk_points.slice(0, 3);
+  if (!article.transcript_available && article.content_basis !== "video_ai") {
+    return ["자막을 못 가져온 영상이라 실제 발언과 다를 수 있습니다. 원문 영상을 꼭 같이 확인하세요."];
+  }
+  return ["영상 하나만으로 매수·매도 결정을 내리지 말고 가격, 거래량, 다른 뉴스까지 함께 확인하세요."];
 }
 
 function summaryCards(videos: NewsArticle[], marketScore: number) {
@@ -227,8 +236,12 @@ function VideoListCard({
             </span>
           </div>
 
-          <div className="text-sm font-medium text-[#ededed] leading-snug line-clamp-2 mb-2">
+          <div className="text-sm font-medium text-[#ededed] leading-snug line-clamp-2 mb-1.5">
             {article.title_ko || article.title}
+          </div>
+
+          <div className="mb-2 line-clamp-2 text-xs leading-5 text-[#9a9a9a]">
+            {(article.investment_points?.[0] || article.insight || article.summary_ko || article.summary || "").replace(/^제목·설명 기준으로 보면 핵심은 /, "")}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -272,6 +285,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
   const sentiment = getSentimentMeta(article.sentiment);
   const bullets = splitBullets(article.transcript_excerpt, article.insight, overallInsight);
   const actionBullets = buildActionBullets(article);
+  const riskBullets = buildRiskBullets(article);
   const tags = article.tags || [];
   const tickers = article.tickers || [];
   const hasVideoContent = article.transcript_available || article.content_basis === "video_ai";
@@ -395,6 +409,19 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                 <div className="mt-3 pt-2 border-t border-[#1a1a1a] text-[10px] font-mono text-[#444]">
                   출처 관점: {article.source_role || article.layer_label || "전문가 해설"} | 매매 전 원문 확인 필수
                 </div>
+              </div>
+
+              {/* 리스크 체크 */}
+              <div className="rounded-xl border border-red-500/10 bg-red-500/[0.03] p-3">
+                <div className="text-[10px] font-mono text-red-300/80 mb-2">[ 조심할 점 ]</div>
+                <ul className="space-y-2">
+                  {riskBullets.map((bullet) => (
+                    <li key={bullet} className="flex gap-2 text-xs leading-5 text-[#b8b8b8]">
+                      <span className="text-red-400/70 mt-0.5 shrink-0">!</span>
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* 태그 + 링크 */}

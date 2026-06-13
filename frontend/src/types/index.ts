@@ -86,6 +86,8 @@ export interface NewsArticle {
   topic?: string;
   topic_label?: string;
   insight?: string;
+  investment_points?: string[];
+  risk_points?: string[];
   channel?: string;
   tier?: "s" | "a" | "b";
   tier_label?: string;

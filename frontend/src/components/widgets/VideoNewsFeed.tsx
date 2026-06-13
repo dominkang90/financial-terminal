@@ -288,7 +288,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
   const riskBullets = buildRiskBullets(article);
   const tags = article.tags || [];
   const tickers = article.tickers || [];
-  const hasVideoContent = article.transcript_available || article.content_basis === "video_ai";
+  const hasVideoContent = article.transcript_available || article.content_basis === "video_ai" || article.content_basis === "transcript_ai";
 
   return (
     <AnimatePresence mode="wait">
@@ -368,7 +368,13 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-400"
                     : "border-[#333] bg-[#1a1a1a] text-[#555]"
                 )}>
-                  {article.transcript_available ? "자막 기반" : article.content_basis === "video_ai" ? "영상 AI" : "제목 기준"}
+                  {article.content_basis === "transcript_ai"
+                    ? "자막 AI 요약"
+                    : article.transcript_available
+                      ? "자막 기반"
+                      : article.content_basis === "video_ai"
+                        ? "영상 AI"
+                        : "제목 기준"}
                 </span>
               </div>
 

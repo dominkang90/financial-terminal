@@ -409,6 +409,77 @@ async def _fetch_youtube_transcript(video_id: Optional[str]) -> Optional[str]:
     return transcript
 
 
+async def _summarize_transcript_with_ai(video_id: Optional[str], title: str, transcript: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not settings.GEMINI_API_KEY or not video_id or not transcript or len(transcript) < 120:
+        return None
+
+    cache_key = f"yt-transcript-ai-brief:{video_id}:v1"
+    if cache_key in _youtube_transcript_cache:
+        return _youtube_transcript_cache[cache_key]
+
+    prompt = (
+        "너는 NotebookLM처럼 유튜브 자막만 읽고 투자자가 쓸 수 있는 시장 노트를 만드는 분석가야. "
+        "반드시 제공된 자막 내용만 근거로 써. 영상 제목, 설명란, 광고, 댓글을 근거로 삼지 마. "
+        "확실하지 않은 종목명은 만들지 마. 한국어 JSON만 출력해.\n\n"
+        "JSON 형식:\n"
+        "{\n"
+        "  \"insight\": \"자막 기반 핵심 요약 2문장\",\n"
+        "  \"investment_points\": [\"투자자가 확인할 점 1\", \"확인할 점 2\", \"확인할 점 3\"],\n"
+        "  \"risk_points\": [\"조심할 점 1\", \"조심할 점 2\"],\n"
+        "  \"mentioned_assets\": [\"자막에 직접 나온 종목/섹터/자산만\"]\n"
+        "}\n\n"
+        f"영상 제목(참고용, 근거로 쓰지 말 것): {title}\n\n"
+        f"자막:\n{_compact_text(transcript, max_len=9000)}"
+    )
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.15,
+            "maxOutputTokens": 900,
+            "responseMimeType": "application/json",
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=18.0, follow_redirects=True) as client:
+            response = await client.post(
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{settings.GEMINI_MODEL}:generateContent?key={settings.GEMINI_API_KEY}",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+        parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        raw = " ".join(part.get("text", "") for part in parts if part.get("text"))
+        raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        parsed = json.loads(raw)
+        brief = {
+            "insight": _compact_text(_strip_youtube_noise(str(parsed.get("insight") or "")), max_len=700),
+            "investment_points": [
+                _compact_text(_strip_youtube_noise(str(item)), max_len=220)
+                for item in (parsed.get("investment_points") or [])[:4]
+                if str(item).strip()
+            ],
+            "risk_points": [
+                _compact_text(_strip_youtube_noise(str(item)), max_len=220)
+                for item in (parsed.get("risk_points") or [])[:3]
+                if str(item).strip()
+            ],
+            "mentioned_assets": [
+                _compact_text(_strip_youtube_noise(str(item)), max_len=80)
+                for item in (parsed.get("mentioned_assets") or [])[:8]
+                if str(item).strip()
+            ],
+        }
+        if brief["insight"] or brief["investment_points"]:
+            _youtube_transcript_cache[cache_key] = brief
+            return brief
+    except Exception:
+        return None
+
+    return None
+
+
 async def _fetch_gemini_youtube_summary(video_url: str, title: str) -> Optional[str]:
     if not settings.GEMINI_API_KEY or not video_url:
         return None
@@ -1187,7 +1258,7 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
         cached_videos = disk_data.get("videos", []) if isinstance(disk_data, dict) else []
         cache_has_new_insights = (
             isinstance(disk_data, dict)
-            and disk_data.get("cache_version") == 2
+            and disk_data.get("cache_version") == 3
             and bool(cached_videos)
             and all("investment_points" in video and "risk_points" in video for video in cached_videos[:3])
         )
@@ -1230,6 +1301,15 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 except Exception:
                     content_text = None
                     content_basis = "none"
+            transcript_ai_brief: Optional[Dict[str, Any]] = None
+            if content_basis == "transcript" and settings.GEMINI_API_KEY:
+                try:
+                    transcript_ai_brief = await asyncio.wait_for(
+                        _summarize_transcript_with_ai(video_id, title, content_text),
+                        timeout=20.0,
+                    )
+                except Exception:
+                    transcript_ai_brief = None
             content_excerpt = _pick_focus_sentences(content_text or summary, limit=3)
             summary_for_analysis = " ".join(_pick_focus_sentences(summary, limit=3)) if summary else ""
             analysis_text = _compact_text(f"{title} {summary_for_analysis} {content_text or ''}", max_len=3000)
@@ -1267,11 +1347,12 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
                 "source_role": channel.get("role", "전문가 해설"),
                 "tags": tags,
                 "transcript_available": bool(content_text),
-                "content_basis": content_basis,
+                "content_basis": "transcript_ai" if transcript_ai_brief else content_basis,
                 "transcript_excerpt": " ".join(content_excerpt) if content_excerpt else content_text,
-                "insight": _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
-                "investment_points": _build_investment_points(title, summary, content_text, sentiment, detected_topic, tags, tickers, content_basis),
-                "risk_points": _build_risk_points(title, summary, content_text, detected_topic, content_basis),
+                "insight": (transcript_ai_brief or {}).get("insight") or _build_video_insight(title, summary, content_text, channel["source"], detected_topic, tags, content_basis),
+                "investment_points": (transcript_ai_brief or {}).get("investment_points") or _build_investment_points(title, summary, content_text, sentiment, detected_topic, tags, tickers, content_basis),
+                "risk_points": (transcript_ai_brief or {}).get("risk_points") or _build_risk_points(title, summary, content_text, detected_topic, content_basis),
+                "mentioned_assets": (transcript_ai_brief or {}).get("mentioned_assets") or [],
             })
         return channel_videos
 
@@ -1287,7 +1368,7 @@ async def get_youtube_market_videos(limit: int = 30, topic: str = "all") -> Dict
     market_score = _build_market_score(trimmed)
     channel_consensus = _build_channel_consensus(trimmed)
     result = {
-        "cache_version": 2,
+        "cache_version": 3,
         "videos": trimmed,
         "topics": [{"id": key, "label": value} for key, value in TOPIC_LABELS.items()],
         "tier_filters": _build_filter_counts(trimmed, "tier", "tier_label"),

@@ -88,6 +88,7 @@ export interface NewsArticle {
   insight?: string;
   investment_points?: string[];
   risk_points?: string[];
+  mentioned_assets?: string[];
   channel?: string;
   tier?: "s" | "a" | "b";
   tier_label?: string;
@@ -98,7 +99,7 @@ export interface NewsArticle {
   source_role?: string;
   transcript_excerpt?: string | null;
   transcript_available?: boolean;
-  content_basis?: "transcript" | "video_ai" | "none";
+  content_basis?: "transcript_ai" | "transcript" | "video_ai" | "none";
 }
 
 export interface VideoFilterOption {

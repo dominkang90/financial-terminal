@@ -63,7 +63,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (activeTab) {
-      case "home": return <HomePage />;
+      case "home": return <HomePage onTabChange={setActiveTab} />;
       case "markets": return <MarketsPage />;
       case "chart": return <ChartPage />;
       case "news": return <NewsPage />;
@@ -73,7 +73,7 @@ export default function App() {
       case "ai": return <AIPage />;
       case "monitor": return <MonitorPage />;
       case "admin": return <AdminPage />;
-      default: return <HomePage />;
+      default: return <HomePage onTabChange={setActiveTab} />;
     }
   };
 

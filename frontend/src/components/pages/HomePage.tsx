@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import { marketApi, newsApi } from "@/api/client";
-import type { VideoNewsResponse } from "@/types";
+import type { TabId, VideoNewsResponse } from "@/types";
 
 interface IndexCard {
   label: string;
@@ -186,6 +186,62 @@ function MarketBrief({
   );
 }
 
+function FriendlyGuide({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
+  const actions: Array<{ label: string; desc: string; tab: TabId; icon: typeof Search }> = [
+    { label: "종목 보기", desc: "주가·차트부터 확인", tab: "markets", icon: Search },
+    { label: "뉴스 읽기", desc: "오늘 이슈 빠르게 보기", tab: "news", icon: Newspaper },
+    { label: "감시판 만들기", desc: "가격 알림 준비하기", tab: "monitor", icon: Bell },
+    { label: "AI에게 묻기", desc: "어려운 내용 풀어보기", tab: "ai", icon: Bot },
+  ];
+
+  const terms = [
+    { word: "VIX", meaning: "시장이 얼마나 불안한지 보는 온도계예요." },
+    { word: "원/달러", meaning: "달러 1개를 사는 데 필요한 원화 가격이에요." },
+    { word: "지수", meaning: "여러 종목을 묶어 시장 전체 흐름을 보는 숫자예요." },
+    { word: "최근가", meaning: "제공처가 마지막으로 알려준 가격이에요. 실시간이 아닐 수 있어요." },
+  ];
+
+  return (
+    <div className="rounded-xl border border-terminal-accent/25 bg-gradient-to-br from-terminal-panel to-terminal-bg p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between">
+        <div className="min-w-0 lg:w-5/12">
+          <div className="text-[10px] font-mono text-terminal-accent uppercase tracking-widest">처음 오셨나요?</div>
+          <h1 className="mt-2 text-lg font-semibold text-terminal-text-primary">오늘은 여기서 시작하면 돼요</h1>
+          <p className="mt-2 text-sm leading-6 text-terminal-text-secondary">
+            어려운 금융 화면을 한 번에 다 볼 필요 없어요. 아래 버튼 중 하나만 눌러도 다음 행동으로 바로 이동해요.
+          </p>
+        </div>
+
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+          {actions.map(({ label, desc, tab, icon: Icon }) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => onTabChange(tab)}
+              className="group rounded-lg border border-terminal-border bg-terminal-bg/40 p-3 text-left transition hover:border-terminal-accent/60 hover:bg-terminal-accent/5"
+            >
+              <div className="mb-2 flex items-center gap-2 text-terminal-text-primary">
+                <Icon size={14} className="text-terminal-accent" />
+                <span className="text-xs font-semibold">{label}</span>
+              </div>
+              <div className="text-[11px] leading-4 text-terminal-text-dim group-hover:text-terminal-text-secondary">{desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 md:grid-cols-4">
+        {terms.map((term) => (
+          <div key={term.word} className="rounded-lg border border-terminal-border bg-terminal-bg/30 px-3 py-2">
+            <div className="text-[10px] font-mono font-semibold text-terminal-yellow">{term.word}</div>
+            <div className="mt-1 text-[11px] leading-4 text-terminal-text-dim">{term.meaning}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // AI 인사이트 파서 (기존 유지)
 function InsightBlock({ text }: { text: string }) {
   return (
@@ -218,7 +274,7 @@ function InsightBlock({ text }: { text: string }) {
   );
 }
 
-export function HomePage() {
+export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
   const [indices, setIndices]         = useState<Record<string, any>>({});
   const [forex, setForex]             = useState<Record<string, any>>({});
   const [commodities, setCommodities] = useState<Record<string, any>>({});
@@ -291,6 +347,8 @@ export function HomePage() {
   return (
     <div className="h-full overflow-y-auto bg-terminal-bg">
       <div className="p-4 space-y-5 max-w-6xl mx-auto">
+
+        <FriendlyGuide onTabChange={onTabChange} />
 
         {/* ── 상단 상태 바 ─────────────────────────────────── */}
         <div className="flex flex-wrap items-stretch gap-2">

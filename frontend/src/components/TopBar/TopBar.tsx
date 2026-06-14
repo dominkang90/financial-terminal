@@ -113,7 +113,7 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
                   className="flex items-center gap-1 px-2 py-1 rounded border border-terminal-border hover:border-terminal-accent text-terminal-text-secondary hover:text-terminal-accent text-xs font-mono"
                 >
                   <User size={11} />
-                  <span className="hidden sm:block max-w-16 truncate">{user?.username ?? "계정"}</span>
+                  <span className="max-w-16 truncate">{user?.username ?? "계정"}</span>
                   <ChevronDown size={10} />
                 </button>
                 {showUserMenu && (
@@ -138,7 +138,7 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
                 title="로그아웃"
               >
                 <LogOut size={11} />
-                <span className="hidden sm:block">로그아웃</span>
+                <span>로그아웃</span>
               </button>
             </div>
           ) : (

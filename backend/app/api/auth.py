@@ -312,4 +312,15 @@ async def kakao_oauth_callback(request: Request, code: str | None = None, error:
     nickname = info.get("properties", {}).get("nickname", "") or str(info["id"])
     user = await _find_or_create_oauth_user(db, email, nickname, "kakao")
     jwt = create_access_token(user.id)
-    return _oauth_frontend_redirect(request, token=jwt)
+    return _oauth_frontend_redirect(
+        request,
+        token=jwt,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "settings": user.settings or {},
+            "watchlist": user.watchlist or [],
+            "layout_config": user.layout_config or {},
+        },
+    )

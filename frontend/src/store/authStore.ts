@@ -1,3 +1,4 @@
+import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
@@ -59,9 +60,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const user = await authApi.me();
           set({ user, accessToken: token });
-        } catch {
-          localStorage.removeItem("access_token");
-          set({ user: null, accessToken: null });
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response?.status === 401) {
+            localStorage.removeItem("access_token");
+            set({ user: null, accessToken: null });
+            return;
+          }
+          set({ accessToken: token });
         }
       },
 

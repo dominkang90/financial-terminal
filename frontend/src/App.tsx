@@ -26,10 +26,11 @@ export default function App() {
   const { theme } = useSettingsStore();
 
   useEffect(() => {
-    const oauthParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const oauthToken = oauthParams.get("oauth_token");
-    const oauthUser = oauthParams.get("oauth_user");
-    const oauthError = oauthParams.get("oauth_error");
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const queryParams = new URLSearchParams(window.location.search);
+    const oauthToken = hashParams.get("oauth_token") ?? queryParams.get("oauth_token");
+    const oauthUser = hashParams.get("oauth_user") ?? queryParams.get("oauth_user");
+    const oauthError = hashParams.get("oauth_error") ?? queryParams.get("oauth_error");
 
     if (oauthToken) {
       handledOAuthRef.current = true;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMarketStore } from "@/store/marketStore";
-import { ChangeValue } from "@/components/common/DataStatus";
+import { ChangeValue, DataStatusBadge } from "@/components/common/DataStatus";
 
 function getMarketStatus(timeZone: string, openHm: number, closeHm: number) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -43,19 +43,31 @@ function MarketStatus() {
 
 const DISPLAY_ORDER = [
   { key: "SPX", label: "S&P500" },
-  { key: "NDX", label: "NASDAQ" },
+  { key: "NDX", label: "Nasdaq 100" },
   { key: "DJIA", label: "DOW" },
   { key: "VIX", label: "VIX" },
-  { key: "RUT", label: "RUT" },
+  { key: "RUT", label: "Russell 2000" },
   { key: "KOSPI", label: "KOSPI" },
 ];
 
+function formatUpdatedTime() {
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
 export function IndexStrip() {
   const { indices, fetchIndices } = useMarketStore();
+  const [updatedAt, setUpdatedAt] = useState<string>("");
 
   useEffect(() => {
-    fetchIndices();
-    const id = setInterval(fetchIndices, 30_000);
+    const refresh = () => {
+      fetchIndices();
+      setUpdatedAt(formatUpdatedTime());
+    };
+    refresh();
+    const id = setInterval(refresh, 30_000);
     return () => clearInterval(id);
   }, [fetchIndices]);
 
@@ -73,15 +85,26 @@ export function IndexStrip() {
         }
 
         return (
-          <div key={key} className="flex items-center gap-1.5 min-w-fit cursor-default">
+          <div
+            key={key}
+            className="flex items-center gap-1.5 min-w-fit cursor-default"
+            title={`출처: ${q.data_source || "제공처 확인 중"} · 상태: ${q.data_status || "제공처 기준"} · 확인: ${updatedAt || "확인 중"}`}
+          >
             <span className="text-2xs text-terminal-text-secondary font-mono">{label}</span>
             <span className="text-xs font-mono text-terminal-text-primary">
               {q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "—"}
             </span>
             <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />
+            {q.data_status && <DataStatusBadge status={q.data_status} className="hidden lg:inline" />}
           </div>
         );
       })}
+
+      {/* 지수 신뢰 안내 */}
+      <div className="hidden xl:flex items-center gap-1 min-w-fit text-[10px] font-mono text-terminal-text-dim">
+        <span>지수 출처/지연은 항목에 마우스를 올리면 보여요</span>
+        {updatedAt && <span>· 확인 {updatedAt}</span>}
+      </div>
 
       {/* 구분선 */}
       <div className="w-px h-3 bg-terminal-border mx-1 flex-shrink-0" />

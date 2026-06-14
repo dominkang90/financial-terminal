@@ -41,13 +41,14 @@ export function AISummary() {
     method === "gemini" ? "Gemini" :
     method === "rule_based" || method === "rule_based_fallback" ? (serverGeminiConfigured || geminiApiKey ? "규칙 기반 폴백" : "규칙 기반") :
     method === "error" ? "오류" : "";
+  const titleLabel = method === "gemini" ? "AI 분석 요약" : "기본 지표 요약";
 
   return (
     <div className="border-t border-terminal-border">
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-terminal-header">
         <Sparkles size={10} className="text-terminal-accent" />
         <span className="text-2xs font-mono text-terminal-text-dim uppercase tracking-wider flex-1">
-          AI 요약
+          {titleLabel}
         </span>
         {methodLabel && (
           <span className="text-2xs font-mono text-terminal-blue bg-terminal-blue/10 px-1 rounded">

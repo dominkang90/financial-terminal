@@ -47,6 +47,17 @@ function detailRows(quote: Quote, mode: "KRW" | "NATIVE"): [string, string][] {
   ];
 }
 
+const DETAIL_HELP: Record<string, string> = {
+  PER: "회사 이익에 비해 주가가 비싼지 보는 숫자예요. 낮다고 무조건 좋은 것은 아니에요.",
+  PBR: "회사 장부가치에 비해 주가가 비싼지 보는 숫자예요.",
+  EPS: "주식 1주가 벌어들인 이익이에요.",
+  BPS: "주식 1주에 해당하는 회사의 순자산이에요.",
+  "배당수익률": "주가 대비 배당금을 얼마나 주는지 보는 비율이에요.",
+  "52주 고가": "최근 1년 중 가장 높았던 가격이에요.",
+  "52주 저가": "최근 1년 중 가장 낮았던 가격이에요.",
+  "외국인 보유율": "외국인 투자자가 들고 있는 비중이에요.",
+};
+
 export function QuotePanel() {
   const { activeSymbol, quotes, fetchQuote } = useMarketStore();
   const {
@@ -170,7 +181,12 @@ export function QuotePanel() {
       <div className="divide-y divide-terminal-border">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-terminal-border/30">
-            <span className="text-2xs text-terminal-text-dim font-mono">{label}</span>
+            <span className="inline-flex items-center gap-1 text-2xs text-terminal-text-dim font-mono" title={DETAIL_HELP[label]}>
+              {label}
+              {DETAIL_HELP[label] && (
+                <span className="rounded border border-terminal-border px-1 text-[9px] text-terminal-text-dim">?</span>
+              )}
+            </span>
             <span className="text-2xs font-mono text-terminal-text-primary text-right break-all">{value}</span>
           </div>
         ))}

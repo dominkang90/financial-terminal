@@ -38,7 +38,22 @@ export function formatMoney(value?: number | null, currency?: string) {
 
 export function formatLargeMoney(value?: number | null, currency?: string) {
   if (value === null || value === undefined) return "—";
-  return `${currencySymbol(currency)}${formatNumberValue(value, 0)}`;
+  const symbol = currencySymbol(currency);
+  const upper = (currency || "").toUpperCase();
+
+  if (upper === "KRW") {
+    const abs = Math.abs(value);
+    if (abs >= 1e16) return `${symbol}${(value / 1e16).toFixed(2)}경`;
+    if (abs >= 1e12) return `${symbol}${(value / 1e12).toFixed(0)}조`;
+    if (abs >= 1e8) return `${symbol}${(value / 1e8).toFixed(0)}억`;
+  }
+
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return `${symbol}${(value / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${symbol}${(value / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${symbol}${(value / 1e6).toFixed(2)}M`;
+
+  return `${symbol}${formatNumberValue(value, 0)}`;
 }
 
 export function canToggleCurrency(quote?: Partial<Quote> | null) {

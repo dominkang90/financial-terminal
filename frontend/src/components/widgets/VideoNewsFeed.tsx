@@ -97,6 +97,12 @@ function buildRiskBullets(article: NewsArticle) {
   return ["영상 하나만으로 매수·매도 결정을 내리지 말고 가격, 거래량, 다른 뉴스까지 함께 확인하세요."];
 }
 
+function scoreConfidence(coveragePct: number) {
+  if (coveragePct >= 70) return { label: "신뢰도 높음", className: "text-emerald-300 border-emerald-400/30 bg-emerald-400/5" };
+  if (coveragePct >= 30) return { label: "신뢰도 보통", className: "text-amber-300 border-amber-400/30 bg-amber-400/5" };
+  return { label: "신뢰도 낮음", className: "text-red-300 border-red-400/30 bg-red-400/5" };
+}
+
 function summaryCards(videos: NewsArticle[], marketScore: number) {
   const bullish = videos.filter((item) => item.sentiment === "positive").length;
   const bearish = videos.filter((item) => item.sentiment === "negative").length;
@@ -677,6 +683,9 @@ export function VideoNewsFeed() {
     });
   }, [source, tier, videos]);
 
+  const contentReady = filteredVideos.filter((item) => item.transcript_available || item.content_basis === "video_ai" || item.content_basis === "transcript_ai").length;
+  const coveragePct = filteredVideos.length ? Math.round((contentReady / filteredVideos.length) * 100) : 0;
+  const confidence = scoreConfidence(coveragePct);
   const cards = useMemo(() => summaryCards(filteredVideos, payload?.market_score ?? 50), [filteredVideos, payload?.market_score]);
 
   const filteredConsensus = useMemo(() => {
@@ -739,6 +748,19 @@ export function VideoNewsFeed() {
                 {cards.map((card) => (
                   <MetricCard key={card.title} title={card.title} value={card.value} hint={card.hint} accent={card.accent} />
                 ))}
+              </div>
+
+              <div className="rounded-xl border border-[#222] bg-[#0d0d0d] p-2.5">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono text-[#777]">시장 온도 읽는 법</span>
+                  <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-mono", confidence.className)}>
+                    {confidence.label}
+                  </span>
+                </div>
+                <p className="text-[10px] font-mono leading-relaxed text-[#555]">
+                  50점은 중립이에요. 긍정/부정 영상 수, 채널 중요도, 주제 강도를 더해 체감 점수를 만들고, 내용 확보율 {coveragePct}%를 함께 봐야 해요.
+                  내용 확보가 낮으면 실제 자막 분석이 아니라 제목·설명 추정에 가까워요.
+                </p>
               </div>
 
               {/* 주제 필터 */}

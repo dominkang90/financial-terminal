@@ -132,6 +132,60 @@ function MarketStatusBadge({ label, open }: { label: string; open: boolean }) {
   );
 }
 
+function BriefChip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "green" | "red" | "yellow" | "neutral" }) {
+  const toneClass = {
+    green: "border-terminal-green/30 bg-terminal-green/5 text-terminal-green",
+    red: "border-terminal-red/30 bg-terminal-red/5 text-terminal-red",
+    yellow: "border-terminal-yellow/30 bg-terminal-yellow/5 text-terminal-yellow",
+    neutral: "border-terminal-border bg-terminal-bg/40 text-terminal-text-secondary",
+  }[tone];
+
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+      <div className="text-[9px] font-mono uppercase tracking-wider opacity-70">{label}</div>
+      <div className="mt-0.5 text-xs font-mono font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function MarketBrief({
+  mood,
+  avgChange,
+  vix,
+  usdkrw,
+  oil,
+}: {
+  mood: string;
+  avgChange: number;
+  vix?: IndexCard;
+  usdkrw?: IndexCard;
+  oil?: IndexCard;
+}) {
+  const riskTone = vix?.value == null ? "neutral" : vix.value >= 20 ? "red" : vix.value >= 15 ? "yellow" : "green";
+  const riskText = vix?.value == null ? "확인 중" : vix.value >= 20 ? "변동성 주의" : vix.value >= 15 ? "보통" : "차분";
+  const moodTone = avgChange > 0.3 ? "green" : avgChange < -0.3 ? "red" : "yellow";
+  const fxTone = (usdkrw?.change_pct ?? 0) > 0.2 ? "yellow" : (usdkrw?.change_pct ?? 0) < -0.2 ? "green" : "neutral";
+  const oilTone = (oil?.change_pct ?? 0) > 1 ? "yellow" : (oil?.change_pct ?? 0) < -1 ? "green" : "neutral";
+
+  return (
+    <div className="rounded-xl border border-terminal-border bg-terminal-panel p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] font-mono text-terminal-accent uppercase tracking-widest">오늘 시장 체크</div>
+          <div className="mt-1 text-xs text-terminal-text-dim">지수·환율·유가를 한 번에 묶어 지금 분위기를 보여줘요.</div>
+        </div>
+        <div className="text-[10px] font-mono text-terminal-text-dim">데이터 기준: 제공처 최근가/지연 가능</div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <BriefChip label="시장 분위기" value={`${mood} ${avgChange >= 0 ? "+" : ""}${avgChange.toFixed(2)}%`} tone={moodTone} />
+        <BriefChip label="위험 신호" value={riskText} tone={riskTone} />
+        <BriefChip label="원/달러" value={usdkrw?.value == null ? "확인 중" : `${fmt(usdkrw.value, 0)}원`} tone={fxTone} />
+        <BriefChip label="유가" value={oil?.value == null ? "확인 중" : `$${fmt(oil.value)}`} tone={oilTone} />
+      </div>
+    </div>
+  );
+}
+
 // AI 인사이트 파서 (기존 유지)
 function InsightBlock({ text }: { text: string }) {
   return (
@@ -230,6 +284,9 @@ export function HomePage() {
   const moodColor  = avgChange > 0.3 ? "text-terminal-green" : avgChange < -0.3 ? "text-terminal-red" : "text-terminal-yellow";
 
   const kstTime = clock.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const vixCard = usCards.find((card) => card.label === "VIX");
+  const usdkrwCard = fxCards.find((card) => card.label === "USD/KRW");
+  const oilCard = comCards.find((card) => card.label === "Oil");
 
   return (
     <div className="h-full overflow-y-auto bg-terminal-bg">
@@ -259,6 +316,16 @@ export function HomePage() {
             </div>
           </div>
         </div>
+
+        {!loading && (
+          <MarketBrief
+            mood={marketMood}
+            avgChange={avgChange}
+            vix={vixCard}
+            usdkrw={usdkrwCard}
+            oil={oilCard}
+          />
+        )}
 
         {/* ── 미국 지수 ──────────────────────────────────── */}
         {(loading || usCards.length > 0) && (

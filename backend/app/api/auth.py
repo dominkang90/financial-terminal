@@ -288,39 +288,45 @@ async def kakao_oauth_start(request: Request):
 
 @router.get("/oauth/kakao/callback")
 async def kakao_oauth_callback(request: Request, code: str | None = None, error: str | None = None, db: AsyncSession = Depends(get_db)):
-    if error or not code:
-        return _oauth_frontend_redirect(request, error=error or "access_denied")
-    redirect_uri = f"{_base_url(request)}/api/auth/oauth/kakao/callback"
-    async with httpx.AsyncClient() as client:
-        token_res = await client.post(KAKAO_TOKEN_URL, data={
-            "grant_type": "authorization_code",
-            "client_id": settings.KAKAO_CLIENT_ID,
-            "redirect_uri": redirect_uri,
-            "code": code,
-            **({"client_secret": settings.KAKAO_CLIENT_SECRET} if settings.KAKAO_CLIENT_SECRET else {}),
-        })
-        if token_res.status_code != 200:
-            return _oauth_frontend_redirect(request, error="token_exchange_failed")
-        access_token = token_res.json().get("access_token")
-        info_res = await client.get(KAKAO_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
-        if info_res.status_code != 200:
-            return _oauth_frontend_redirect(request, error="userinfo_failed")
-        info = info_res.json()
+    try:
+        if error or not code:
+            return _oauth_frontend_redirect(request, error=error or "access_denied")
+        redirect_uri = f"{_base_url(request)}/api/auth/oauth/kakao/callback"
+        async with httpx.AsyncClient() as client:
+            token_res = await client.post(KAKAO_TOKEN_URL, data={
+                "grant_type": "authorization_code",
+                "client_id": settings.KAKAO_CLIENT_ID,
+                "redirect_uri": redirect_uri,
+                "code": code,
+                **({"client_secret": settings.KAKAO_CLIENT_SECRET} if settings.KAKAO_CLIENT_SECRET else {}),
+            })
+            if token_res.status_code != 200:
+                logger.warning("Kakao OAuth token exchange failed: %s", token_res.text[:500])
+                return _oauth_frontend_redirect(request, error="token_exchange_failed")
+            access_token = token_res.json().get("access_token")
+            info_res = await client.get(KAKAO_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
+            if info_res.status_code != 200:
+                logger.warning("Kakao OAuth userinfo failed: %s", info_res.text[:500])
+                return _oauth_frontend_redirect(request, error="userinfo_failed")
+            info = info_res.json()
 
-    kakao_account = info.get("kakao_account", {})
-    email = kakao_account.get("email", f"kakao_{info['id']}@kakao.local")
-    nickname = info.get("properties", {}).get("nickname", "") or str(info["id"])
-    user = await _find_or_create_oauth_user(db, email, nickname, "kakao")
-    jwt = create_access_token(user.id)
-    return _oauth_frontend_redirect(
-        request,
-        token=jwt,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "settings": user.settings or {},
-            "watchlist": user.watchlist or [],
-            "layout_config": user.layout_config or {},
-        },
-    )
+        kakao_account = info.get("kakao_account", {})
+        email = kakao_account.get("email", f"kakao_{info['id']}@kakao.local")
+        nickname = info.get("properties", {}).get("nickname", "") or str(info["id"])
+        user = await _find_or_create_oauth_user(db, email, nickname, "kakao")
+        jwt = create_access_token(user.id)
+        return _oauth_frontend_redirect(
+            request,
+            token=jwt,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "settings": user.settings or {},
+                "watchlist": user.watchlist or [],
+                "layout_config": user.layout_config or {},
+            },
+        )
+    except Exception:
+        logger.exception("Kakao OAuth callback failed")
+        return _oauth_frontend_redirect(request, error="server_error")

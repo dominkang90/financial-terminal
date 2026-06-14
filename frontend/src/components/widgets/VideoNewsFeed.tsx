@@ -11,15 +11,17 @@ import { cn } from "@/lib/utils";
 function formatTime(dateStr: string): string {
   try {
     const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return "";
+    if (Number.isNaN(d.getTime())) return "시간 확인 중";
     const diff = Date.now() - d.getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${Math.max(mins, 1)}분 전`;
+    if (mins < -5) return "시간 확인 중";
+    if (mins < 1) return "방금 전";
+    if (mins < 60) return `${mins}분 전`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}시간 전`;
     return `${Math.floor(hours / 24)}일 전`;
   } catch {
-    return "";
+    return "시간 확인 중";
   }
 }
 
@@ -484,7 +486,7 @@ function InsightDashboard({
   onSelect: (article: NewsArticle) => void;
 }) {
   const active = selected || videos[0] || null;
-  const contentReady = videos.filter((item) => item.transcript_available || item.content_basis === "video_ai").length;
+  const contentReady = videos.filter((item) => item.transcript_available || item.content_basis === "video_ai" || item.content_basis === "transcript_ai").length;
   const bullish = videos.filter((item) => item.sentiment === "positive").length;
   const bearish = videos.filter((item) => item.sentiment === "negative").length;
   const neutral = Math.max(videos.length - bullish - bearish, 0);
@@ -514,6 +516,12 @@ function InsightDashboard({
           <p className="text-xs leading-5 text-[#666]">
             {overallInsight || "유튜브 영상의 주제, 시장 톤, 실제 내용 확보율을 한 화면에서 보여줍니다."}
           </p>
+
+          {videos.length > 0 && contentReady === 0 && (
+            <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-2.5 text-[10px] font-mono leading-relaxed text-amber-300">
+              현재 영상 내용 확보율이 0%입니다. 이 화면의 시장 온도와 요약은 자막이 아니라 제목·설명 기준 추정으로 봐야 해요.
+            </div>
+          )}
 
           <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
             {[
@@ -581,11 +589,11 @@ function InsightDashboard({
                   <span className="text-[10px] font-mono text-[#777] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">{active.source}</span>
                   <span className={cn(
                     "text-[10px] font-mono rounded border px-1.5 py-0.5",
-                    active.transcript_available || active.content_basis === "video_ai"
+                    active.transcript_available || active.content_basis === "video_ai" || active.content_basis === "transcript_ai"
                       ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-400"
                       : "border-[#333] bg-[#1a1a1a] text-[#555]"
                   )}>
-                    {active.transcript_available ? "자막" : active.content_basis === "video_ai" ? "영상AI" : "제목기준"}
+                    {active.content_basis === "transcript_ai" ? "자막AI" : active.transcript_available ? "자막" : active.content_basis === "video_ai" ? "영상AI" : "제목기준"}
                   </span>
                 </div>
                 <ul className="space-y-1.5">

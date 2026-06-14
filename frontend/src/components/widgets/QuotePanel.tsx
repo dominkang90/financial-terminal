@@ -3,7 +3,7 @@ import { RotateCcw } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import type { Quote } from "@/types";
-import { ChangeValue, DataStatusBadge, formatNumber } from "@/components/common/DataStatus";
+import { ChangeValue, DataStatusBadge, DataTrustNote, formatNumber } from "@/components/common/DataStatus";
 import { AISummary } from "@/components/widgets/AISummary";
 import {
   canToggleCurrency,
@@ -158,6 +158,13 @@ export function QuotePanel() {
             {changeDisplay.secondary ? `${changeDisplay.primary} / ${changeDisplay.secondary}` : changeDisplay.primary}
           </span>
         </div>
+
+        <DataTrustNote
+          source={quote.data_source}
+          status={quote.data_status}
+          note={quote.note}
+          className="mt-2"
+        />
       </div>
 
       <div className="divide-y divide-terminal-border">

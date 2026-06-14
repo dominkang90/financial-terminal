@@ -10,6 +10,13 @@ interface PortfolioData {
   summary: PortfolioSummary;
 }
 
+const DEMO_POSITIONS = [
+  { symbol: "AAPL", name: "Apple", weight: "35%", pnl: "+4.2%" },
+  { symbol: "NVDA", name: "NVIDIA", weight: "30%", pnl: "+8.7%" },
+  { symbol: "MSFT", name: "Microsoft", weight: "20%", pnl: "+1.9%" },
+  { symbol: "CASH", name: "현금", weight: "15%", pnl: "대기" },
+];
+
 export function Portfolio() {
   const { user } = useAuthStore();
   const [portfolios, setPortfolios] = useState<{ id: number; name: string; is_paper: boolean }[]>([]);
@@ -82,10 +89,47 @@ export function Portfolio() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-2">
-          <PieChart size={24} className="text-terminal-text-dim mx-auto" />
-          <p className="text-xs text-terminal-text-dim font-mono">로그인하면 포트폴리오를 관리할 수 있습니다</p>
+      <div className="h-full overflow-auto p-4">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel p-4">
+            <div className="flex items-start gap-3">
+              <PieChart size={24} className="text-terminal-accent mt-0.5" />
+              <div>
+                <h2 className="text-sm font-mono font-semibold text-terminal-text-primary">포트폴리오 데모</h2>
+                <p className="mt-1 text-xs font-mono text-terminal-text-secondary leading-relaxed">
+                  로그인 전에는 실제 계좌 대신 예시 화면을 보여줘요. 로그인하면 내 종목, 수량, 평균단가를 저장해서 관리할 수 있습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <SummaryCard label="예시 평가금액" value="$128,430" />
+            <SummaryCard label="예시 손익" value="+$6,210" color="text-terminal-green" />
+            <SummaryCard label="예시 수익률" value="+5.08%" color="text-terminal-green" />
+          </div>
+
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+            <div className="px-3 py-2 border-b border-terminal-border text-2xs font-mono text-terminal-text-dim">
+              데모 구성 — 실제 투자 추천이 아니라 화면 예시입니다
+            </div>
+            {DEMO_POSITIONS.map((item) => (
+              <div key={item.symbol} className="flex items-center justify-between gap-3 px-3 py-2 border-b border-terminal-border/50 last:border-b-0">
+                <div>
+                  <div className="text-xs font-mono font-semibold text-terminal-accent">{item.symbol}</div>
+                  <div className="text-2xs font-mono text-terminal-text-dim">{item.name}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-mono text-terminal-text-primary">비중 {item.weight}</div>
+                  <div className={`text-2xs font-mono ${item.pnl.startsWith("+") ? "text-terminal-green" : "text-terminal-text-dim"}`}>{item.pnl}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded border border-terminal-yellow/20 bg-terminal-yellow/5 px-3 py-2 text-[10px] font-mono text-terminal-yellow leading-relaxed">
+            외부 평가자에게 빈 화면처럼 보이지 않도록 데모를 보여줍니다. 실제 포트폴리오 기능은 로그인 뒤 사용할 수 있어요.
+          </div>
         </div>
       </div>
     );

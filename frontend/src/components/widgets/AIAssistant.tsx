@@ -10,8 +10,12 @@ interface Message {
   method?: string;
 }
 
-function buildWelcomeMessage(symbol: string) {
-  return `안녕하세요! 저는 FinTerminal AI 어시스턴트입니다.\n\n현재 선택된 종목: **${symbol}**\n\n종목 분석, 뉴스 요약, 투자 개념 설명 등을 도와드립니다. 무엇이든 물어보세요!`;
+function buildWelcomeMessage(symbol: string, hasGemini = false) {
+  const mode = hasGemini ? "Gemini AI 분석 모드" : "기본 분석 모드";
+  const basis = hasGemini
+    ? "Gemini와 앱의 시장 데이터를 함께 참고합니다."
+    : "Gemini가 연결되지 않아 규칙과 기본 지표 중심으로 답합니다.";
+  return `안녕하세요! 저는 FinTerminal 분석 도우미입니다.\n\n현재 선택된 종목: **${symbol}**\n현재 모드: **${mode}**\n\n${basis}\n투자 추천이 아니라 참고용 설명입니다. 종목 분석, 뉴스 요약, 투자 개념 설명을 도와드릴게요.`;
 }
 
 export function AIAssistant() {
@@ -22,7 +26,7 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: buildWelcomeMessage(activeSymbol),
+      content: buildWelcomeMessage(activeSymbol, hasGemini),
       method: "system",
     },
   ]);
@@ -45,7 +49,7 @@ export function AIAssistant() {
     setMessages((prev) => {
       if (!prev[0] || prev[0].method !== "system") return prev;
       const next = [...prev];
-      next[0] = { ...next[0], content: buildWelcomeMessage(activeSymbol) };
+      next[0] = { ...next[0], content: buildWelcomeMessage(activeSymbol, hasGemini) };
       return next;
     });
   }, [activeSymbol, hasGemini]);
@@ -96,9 +100,9 @@ export function AIAssistant() {
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border flex-shrink-0">
         <Bot size={13} className="text-terminal-accent" />
-        <span className="text-xs font-mono text-terminal-text-secondary">AI 어시스턴트</span>
-        <span className="text-2xs font-mono text-terminal-blue bg-terminal-blue/10 px-1 rounded">
-          {hasGemini ? "Gemini" : "규칙 기반"}
+        <span className="text-xs font-mono text-terminal-text-secondary">분석 도우미</span>
+        <span className={`text-2xs font-mono px-1 rounded ${hasGemini ? "text-terminal-blue bg-terminal-blue/10" : "text-terminal-yellow bg-terminal-yellow/10"}`}>
+          {hasGemini ? "Gemini AI 분석" : "기본 분석 모드"}
         </span>
         <div className="flex-1" />
         <button
@@ -110,6 +114,13 @@ export function AIAssistant() {
           {isAnalyzing ? "분석 중..." : `${activeSymbol} 분석`}
         </button>
       </div>
+
+      {/* 빠른 질문 */}
+      {!hasGemini && (
+        <div className="px-3 py-2 border-b border-terminal-border bg-terminal-yellow/5 text-[10px] font-mono text-terminal-yellow leading-relaxed">
+          Gemini가 연결되지 않아 지금 답변은 기본 지표와 규칙 중심입니다. AI 분석처럼 보이지만, 실제 매매 판단은 원문 데이터와 함께 확인하세요.
+        </div>
+      )}
 
       {/* 빠른 질문 */}
       <div className="flex gap-1 px-3 py-1.5 border-b border-terminal-border flex-shrink-0 overflow-x-auto">

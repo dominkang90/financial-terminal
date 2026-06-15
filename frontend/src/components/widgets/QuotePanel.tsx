@@ -24,6 +24,8 @@ function detailRows(quote: Quote, mode: "KRW" | "NATIVE"): [string, string][] {
   const low = formatValueByMode(quote.low, quote.currency, quote.low_krw, mode);
   const prevClose = formatValueByMode(quote.prev_close, quote.currency, quote.prev_close_krw, mode);
 
+  const missing = "확인 중";
+
   return [
     ["시가", open.secondary ? `${open.primary} · ${open.secondary}` : open.primary],
     ["고가", high.secondary ? `${high.primary} · ${high.secondary}` : high.primary],
@@ -32,18 +34,18 @@ function detailRows(quote: Quote, mode: "KRW" | "NATIVE"): [string, string][] {
     ["거래량", formatNumber(quote.volume ?? 0, 0)],
     ["평균거래량", formatNumber(quote.avg_volume ?? 0, 0)],
     ["시총", marketCap.secondary ? `${marketCap.primary} · ${marketCap.secondary}` : marketCap.primary],
-    ["PER", quote.pe_ratio ? formatNumber(quote.pe_ratio) : "—"],
-    ["PBR", quote.pbr ? formatNumber(quote.pbr) : "—"],
+    ["PER", quote.pe_ratio ? formatNumber(quote.pe_ratio) : missing],
+    ["PBR", quote.pbr ? formatNumber(quote.pbr) : missing],
     ["EPS", eps.secondary ? `${eps.primary} · ${eps.secondary}` : eps.primary],
-    ["BPS", quote.bps ? formatMoney(quote.bps, quote.currency === "KRW" ? "KRW" : quote.currency) : "—"],
-    ["배당수익률", quote.dividend_yield ? `${(quote.dividend_yield * 100).toFixed(2)}%` : "—"],
+    ["BPS", quote.bps ? formatMoney(quote.bps, quote.currency === "KRW" ? "KRW" : quote.currency) : missing],
+    ["배당수익률", quote.dividend_yield ? `${(quote.dividend_yield * 100).toFixed(2)}%` : missing],
     ["52주 고가", high52.secondary ? `${high52.primary} · ${high52.secondary}` : high52.primary],
     ["52주 저가", low52.secondary ? `${low52.primary} · ${low52.secondary}` : low52.primary],
-    ["외국인 보유율", quote.foreign_ownership ? `${quote.foreign_ownership.toFixed(2)}%` : "—"],
-    ["상장주식수", quote.shares_outstanding ? formatNumber(quote.shares_outstanding, 0) : "—"],
-    ["섹터", quote.sector ?? "—"],
-    ["업종", quote.industry ?? "—"],
-    ["거래소", quote.exchange ?? "—"],
+    ["외국인 보유율", quote.foreign_ownership ? `${quote.foreign_ownership.toFixed(2)}%` : missing],
+    ["상장주식수", quote.shares_outstanding ? formatNumber(quote.shares_outstanding, 0) : missing],
+    ["섹터", quote.sector ?? missing],
+    ["업종", quote.industry ?? missing],
+    ["거래소", quote.exchange ?? missing],
   ];
 }
 

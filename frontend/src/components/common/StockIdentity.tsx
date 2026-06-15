@@ -41,7 +41,7 @@ export function StockIdentity({ symbol, quote, compact = false, active = false, 
     <div className="flex min-w-0 items-center gap-2">
       <div className="min-w-0 leading-tight">
         <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
-          <span className={`shrink-0 rounded border border-terminal-border bg-[#1a1a1a] px-1.5 py-0.5 font-mono font-bold text-terminal-accent ${compact ? "text-[9px]" : "text-[10px]"}`}>
+          <span className={`shrink-0 rounded border border-terminal-border bg-terminal-bg/70 px-1.5 py-0.5 font-mono font-bold text-terminal-accent ${compact ? "text-[9px]" : "text-[10px]"}`}>
             {sym}
           </span>
           {subtitle && <span className="truncate text-[10px] font-mono text-terminal-text-dim">{subtitle}</span>}

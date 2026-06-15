@@ -65,7 +65,7 @@ export function CommandBar() {
   }, []);
 
   return (
-    <div className="relative flex-1 max-w-sm">
+    <div className="relative w-full sm:flex-1 sm:max-w-sm">
       <div className="flex items-center gap-1.5 bg-terminal-panel border border-terminal-border rounded px-2 py-1">
         <Search size={12} className="text-terminal-text-dim flex-shrink-0" />
         <input

@@ -45,7 +45,7 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
   return (
     <div className="flex flex-col flex-shrink-0 bg-terminal-bg border-b border-terminal-border">
       {/* 최상단 메뉴 바 */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-terminal-border">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-terminal-border sm:flex-nowrap">
         {/* 로고 — 클릭 시 홈으로 */}
         <button
           type="button"
@@ -75,15 +75,17 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
           ))}
         </nav>
 
-        <div className="flex-1" />
+        <div className="hidden flex-1 sm:block" />
 
         {/* 검색창 */}
-        <CommandBar />
+        <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
+          <CommandBar />
+        </div>
 
-        <div className="flex-1" />
+        <div className="hidden flex-1 sm:block" />
 
         {/* 우측 액션 */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="ml-auto flex items-center gap-1.5 flex-shrink-0 sm:ml-0">
           <button
             onClick={() => setBeginnerMode(!beginnerMode)}
             className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono transition-colors ${
@@ -159,7 +161,7 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
               className="flex items-center gap-1 px-2 py-1 rounded border border-terminal-accent text-terminal-accent hover:bg-terminal-accent hover:text-black text-xs font-mono transition-colors"
             >
               <LogIn size={11} />
-              로그인
+              <span className="hidden sm:inline">로그인</span>
             </button>
           )}
         </div>

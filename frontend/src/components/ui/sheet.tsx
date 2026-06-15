@@ -25,7 +25,7 @@ export const SheetContent = React.forwardRef<
     <Dialog.Content
       ref={ref}
       className={cn(
-        "fixed z-50 border border-white/10 bg-[#0c1324] text-white shadow-2xl outline-none",
+        "fixed z-50 border border-terminal-border bg-terminal-panel text-terminal-text-primary shadow-2xl outline-none",
         side === "bottom"
           ? "inset-x-0 bottom-0 max-h-[88vh] rounded-t-[28px] border-b-0"
           : "right-0 top-0 h-full w-full max-w-2xl border-l",
@@ -34,7 +34,7 @@ export const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <Dialog.Close className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 p-2 text-white/65 transition hover:text-white">
+      <Dialog.Close className="absolute right-4 top-4 rounded-full border border-terminal-border bg-terminal-bg/70 p-2 text-terminal-text-secondary transition hover:text-terminal-text-primary">
         <X size={16} />
       </Dialog.Close>
     </Dialog.Content>
@@ -55,5 +55,5 @@ SheetTitle.displayName = Dialog.Title.displayName;
 export const SheetDescription = React.forwardRef<
   React.ElementRef<typeof Dialog.Description>,
   React.ComponentPropsWithoutRef<typeof Dialog.Description>
->(({ className, ...props }, ref) => <Dialog.Description ref={ref} className={cn("text-sm text-white/55", className)} {...props} />);
+>(({ className, ...props }, ref) => <Dialog.Description ref={ref} className={cn("text-sm text-terminal-text-secondary", className)} {...props} />);
 SheetDescription.displayName = Dialog.Description.displayName;

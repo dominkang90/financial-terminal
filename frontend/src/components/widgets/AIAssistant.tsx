@@ -13,6 +13,9 @@ interface AIEvidence {
   news_count?: number;
   news_titles?: string[];
   checked_at?: string;
+  reasoning_summary?: string;
+  evidence_strength?: string;
+  safety_note?: string;
   transcript_used?: boolean;
   transcript_note?: string;
   disclaimer?: string;
@@ -57,16 +60,18 @@ function EvidenceBox({ evidence }: { evidence?: AIEvidence }) {
     ["사용한 가격", `${evidence.symbol || "선택 종목"} ${priceText} · ${evidence.price_source || "앱 시장 데이터"}`],
     ["사용한 뉴스", `${evidence.news_count ?? 0}개 확인${evidence.news_titles?.[0] ? ` · ${evidence.news_titles[0]}` : ""}`],
     ["기준 시각", `${formatEvidenceTime(evidence.checked_at)} KST`],
+    ["왜 이렇게?", evidence.reasoning_summary || "가격, 뉴스, 데이터 상태를 함께 봤어요."],
+    ["근거 충분도", evidence.evidence_strength || "확인 중"],
     ["자막 사용", evidence.transcript_used ? "사용함" : (evidence.transcript_note || "사용 안 함")],
-    ["주의", evidence.disclaimer || "투자 추천이 아니라 참고용 설명입니다."],
+    ["주의", evidence.safety_note || evidence.disclaimer || "투자 추천이 아니라 참고용 설명입니다."],
   ];
 
   return (
     <div className="mt-2 rounded border border-terminal-accent/20 bg-terminal-accent/5 p-2">
-      <div className="mb-1 text-[10px] font-mono font-semibold text-terminal-accent">AI 분석 근거</div>
+      <div className="mb-1 text-[10px] font-mono font-semibold text-terminal-accent">AI 분석 근거 · 왜 이렇게 말했나요?</div>
       <div className="space-y-1">
         {rows.map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[72px_1fr] gap-2 text-[10px] font-mono leading-4">
+          <div key={label} className="grid grid-cols-[80px_1fr] gap-2 text-[10px] font-mono leading-4">
             <span className="text-terminal-text-dim">{label}</span>
             <span className="text-terminal-text-secondary">{value}</span>
           </div>
@@ -176,17 +181,17 @@ export function AIAssistant() {
       {/* 빠른 질문 */}
       {!hasGemini && (
         <div className="px-3 py-2 border-b border-terminal-border bg-terminal-yellow/5 text-[10px] font-mono text-terminal-yellow leading-relaxed">
-          Gemini가 연결되지 않아 지금 답변은 기본 지표와 규칙 중심입니다. AI 분석처럼 보이지만, 실제 매매 판단은 원문 데이터와 함께 확인하세요.
+          Gemini가 연결되지 않아 지금 답변은 기본 지표와 규칙 중심입니다. 매수·매도 신호가 아니라, 원문 데이터를 쉽게 풀어보는 참고 설명이에요.
         </div>
       )}
 
       {/* 빠른 질문 */}
       <div className="flex gap-1 px-3 py-1.5 border-b border-terminal-border flex-shrink-0 overflow-x-auto">
         {[
-          "RSI란 무엇인가요?",
-          "P/E 비율 해석 방법",
-          `${activeSymbol} 52주 범위는?`,
-          "배당주 투자 전략",
+          "RSI를 쉬운 말로 알려줘",
+          "PER이 높으면 무슨 뜻이야?",
+          `${activeSymbol}를 볼 때 확인할 점은?`,
+          "투자 추천처럼 말하지 말고 설명해줘",
         ].map((q) => (
           <button
             key={q}
@@ -213,7 +218,7 @@ export function AIAssistant() {
                 <div className="flex items-center gap-1 mb-1">
                   <Bot size={9} className="text-terminal-accent" />
                   <span className="text-2xs text-terminal-text-dim font-mono">
-                    {msg.method === "gemini" ? "Gemini AI" : msg.method === "system" ? "시스템" : "규칙 기반"}
+                    {msg.method === "gemini" ? "Gemini AI" : msg.method === "system" ? "시스템" : msg.method === "safety_guard" ? "안전 설명" : "규칙 기반"}
                   </span>
                 </div>
               )}
@@ -246,7 +251,7 @@ export function AIAssistant() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="질문을 입력하세요... (예: AAPL 지금 사도 될까?)"
+          placeholder="질문을 입력하세요... (예: AAPL을 볼 때 무엇을 확인하면 돼?)"
           disabled={isLoading}
           className="flex-1 bg-terminal-bg border border-terminal-border rounded px-2.5 py-1.5 text-xs font-mono text-terminal-text-primary placeholder-terminal-text-dim outline-none focus:border-terminal-accent disabled:opacity-50"
         />

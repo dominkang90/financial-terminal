@@ -4,8 +4,9 @@ import {
   type IChartApi, type ISeriesApi, type Time,
 } from "lightweight-charts";
 import { useMarketStore } from "@/store/marketStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import type { ChartPeriod, ChartInterval } from "@/types";
-import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
+import { ChangeValue, DataFreshnessLine, formatNumber } from "@/components/common/DataStatus";
 
 const PERIODS: ChartPeriod[] = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"];
 const INTERVALS: ChartInterval[] = ["1d", "1wk", "1mo"];
@@ -30,6 +31,7 @@ export function StockChart() {
     activeSymbol, chartData, chartPeriod, chartInterval,
     setChartPeriod, setChartInterval, isLoadingChart, quotes,
   } = useMarketStore();
+  const { theme } = useSettingsStore();
 
   const chartRef = useRef<HTMLDivElement>(null);
   const chartApi = useRef<IChartApi | null>(null);
@@ -49,35 +51,45 @@ export function StockChart() {
   useEffect(() => {
     if (!chartRef.current) return;
 
+    const css = getComputedStyle(document.documentElement);
+    const rgb = (name: string) => `rgb(${css.getPropertyValue(name).trim().split(/\s+/).join(", ")})`;
+    const panel = rgb("--t-panel");
+    const border = rgb("--t-border");
+    const dim = rgb("--t-text-dim");
+    const green = rgb("--t-green");
+    const red = rgb("--t-red");
+    const yellow = rgb("--t-yellow");
+    const blue = rgb("--t-blue");
+
     chartApi.current = createChart(chartRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "#0d0d0d" },
-        textColor: "#888888",
+        background: { type: ColorType.Solid, color: panel },
+        textColor: dim,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 10,
       },
       grid: {
-        vertLines: { color: "#1a1a1a" },
-        horzLines: { color: "#1a1a1a" },
+        vertLines: { color: border },
+        horzLines: { color: border },
       },
       crosshair: { mode: 1 },
-      rightPriceScale: { borderColor: "#1a1a1a" },
-      timeScale: { borderColor: "#1a1a1a", timeVisible: true },
+      rightPriceScale: { borderColor: border },
+      timeScale: { borderColor: border, timeVisible: true },
       width: chartRef.current.clientWidth,
       height: chartRef.current.clientHeight,
     });
 
     candleSeriesRef.current = chartApi.current.addCandlestickSeries({
-      upColor: "#00cc44",
-      downColor: "#ff3333",
-      borderUpColor: "#00cc44",
-      borderDownColor: "#ff3333",
-      wickUpColor: "#00cc44",
-      wickDownColor: "#ff3333",
+      upColor: green,
+      downColor: red,
+      borderUpColor: green,
+      borderDownColor: red,
+      wickUpColor: green,
+      wickDownColor: red,
     });
 
     volSeriesRef.current = chartApi.current.addHistogramSeries({
-      color: "#1a1a1a",
+      color: border,
       priceFormat: { type: "volume" },
       priceScaleId: "volume",
     });
@@ -86,13 +98,13 @@ export function StockChart() {
     });
 
     ma20Ref.current = chartApi.current.addLineSeries({
-      color: "#ffcc00",
+      color: yellow,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
     });
     ma60Ref.current = chartApi.current.addLineSeries({
-      color: "#3399ff",
+      color: blue,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -112,7 +124,7 @@ export function StockChart() {
       observer.disconnect();
       chartApi.current?.remove();
     };
-  }, []);
+  }, [theme]);
 
   // 데이터 업데이트
   useEffect(() => {
@@ -128,7 +140,7 @@ export function StockChart() {
     const volData = candles.map((c) => ({
       time: c.time as Time,
       value: c.volume,
-      color: c.close >= c.open ? "#00cc4430" : "#ff333330",
+      color: c.close >= c.open ? "rgba(22, 101, 52, 0.20)" : "rgba(153, 27, 27, 0.20)",
     }));
 
     candleSeriesRef.current.setData(candleData);
@@ -153,7 +165,7 @@ export function StockChart() {
     }
 
     chartApi.current?.timeScale().fitContent();
-  }, [chartData, showMA, showVol]);
+  }, [chartData, showMA, showVol, theme]);
 
   const quote = quotes[activeSymbol];
 
@@ -268,9 +280,9 @@ export function StockChart() {
           </>
         )}
         {chartData && (
-          <span className="text-2xs text-terminal-text-dim font-mono ml-auto">
-            {chartData.data_source} · 지연 데이터
-          </span>
+          <div className="min-w-0 flex-1">
+            <DataFreshnessLine source={quote?.data_source || chartData.data_source} status={quote?.data_status || chartData.data_status} />
+          </div>
         )}
       </div>
     </div>

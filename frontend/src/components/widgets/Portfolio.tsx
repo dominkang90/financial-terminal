@@ -34,9 +34,10 @@ function buildPortfolioInsights(positions: Position[], summary?: PortfolioSummar
   return {
     allocation: top ? `${top.symbol} 비중 ${topWeight.toFixed(0)}% · ${mainSector ? `${mainSector[0]} 중심` : "분산 확인 중"}` : "종목을 추가하면 자산 비중을 보여줘요",
     todayPnl: summary ? `${summary.total_pnl >= 0 ? "+" : ""}$${formatNumber(summary.total_pnl)} · ${summary.total_pnl_pct >= 0 ? "+" : ""}${summary.total_pnl_pct.toFixed(2)}%` : "손익 계산 대기 중",
-    risk: risky.length > 0 ? `${risky.length}개 종목 주의 필요` : "큰 손실/데이터 없음 종목 없음",
-    concentration: topWeight >= 40 ? `${top?.symbol}에 많이 몰려 있어요` : "쏠림 위험은 낮은 편이에요",
-    newsImpact: movers.length > 0 ? `${movers.map((pos) => pos.symbol).join(", ")} 뉴스/가격 변화 확인` : "뉴스 영향 큰 종목은 아직 없어요",
+    risk: risky.length > 0 ? `${risky.length}개 종목은 손실이나 데이터 상태를 확인해요` : "큰 손실/데이터 없음 종목은 아직 없어요",
+    concentration: topWeight >= 40 ? `${top?.symbol} 비중이 커서 한 종목 영향이 커요` : "한 종목에 크게 몰리지는 않았어요",
+    newsImpact: movers.length > 0 ? `${movers.map((pos) => pos.symbol).join(", ")}는 가격 변화 이유를 확인해요` : "뉴스 영향이 크게 보이는 종목은 아직 없어요",
+    nextCheck: topWeight >= 40 ? "팔라는 뜻이 아니라 비중을 알고 보자는 뜻이에요" : "새 행동보다 현재 구성을 이해하는 단계예요",
   };
 }
 
@@ -48,6 +49,7 @@ function PortfolioInsightPanel({ positions, summary }: { positions: Position[]; 
     { label: "위험 종목", value: insights.risk },
     { label: "쏠림 확인", value: insights.concentration },
     { label: "뉴스 영향", value: insights.newsImpact },
+    { label: "다음 확인", value: insights.nextCheck },
   ];
 
   return (
@@ -57,7 +59,7 @@ function PortfolioInsightPanel({ positions, summary }: { positions: Position[]; 
         포트폴리오 핵심 체크
         <span className="ml-auto text-[10px] text-terminal-text-dim">투자 추천 아님</span>
       </div>
-      <div className="grid gap-2 md:grid-cols-5">
+      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
         {items.map((item) => (
           <div key={item.label} className="rounded border border-terminal-border bg-terminal-panel px-3 py-2">
             <div className="text-[10px] font-mono text-terminal-text-dim">{item.label}</div>
@@ -166,13 +168,14 @@ export function Portfolio() {
               <WalletCards size={14} className="text-terminal-accent" />
               데모 포트폴리오 핵심 체크
             </div>
-            <div className="grid gap-2 sm:grid-cols-5">
+            <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
               {[
                 ["내 자산 비중", "AAPL 35% · NVDA 30%"],
                 ["오늘 손익", "+$6,210 · +5.08%"],
                 ["위험 종목", "큰 손실 종목 없음"],
                 ["쏠림 확인", "기술주 비중이 높아요"],
                 ["뉴스 영향", "AI/반도체 뉴스 확인"],
+                ["다음 확인", "바로 행동보다 구성을 이해해요"],
               ].map(([label, value]) => (
                 <div key={label} className="rounded border border-terminal-border bg-terminal-bg/40 px-3 py-2">
                   <div className="text-[10px] font-mono text-terminal-text-dim">{label}</div>

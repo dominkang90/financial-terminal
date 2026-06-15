@@ -28,63 +28,104 @@
 }
 
 /* ─── Light Theme ─────────────────────────────────────────────────────────── */
-/* 디자인 원칙: 쿨톤 밝은 회색 배경, 순백 패널, 높은 대비, 선명한 금융 색상 */
+/* 디자인 원칙: 밝은 금융 앱답게 따뜻한 흰 배경 + 또렷한 슬레이트 글자 + 절제된 오렌지 */
 :root.light {
-  /* 배경 — 쿨 라이트 그레이 계열 */
-  --t-bg:             242 243 248;   /* #f2f3f8 */
+  /* 배경 — 순백보다 눈부심을 줄인 오프화이트 */
+  --t-bg:             246 248 252;   /* #f6f8fc */
   --t-panel:          255 255 255;   /* #ffffff */
-  --t-border:         216 219 230;   /* #d8dbe6 */
-  --t-header:         235 237 245;   /* #ebedf5 */
+  --t-border:         186 199 216;   /* #bac7d8 */
+  --t-header:         241 245 249;   /* #f1f5f9 */
 
-  /* 포인트 색상 — 라이트 배경에서도 선명한 오렌지 */
-  --t-accent:         215 68 0;      /* #d74400 */
-  --t-accent-dim:     175 52 0;      /* #af3400 */
+  /* 포인트 색상 — 밝은 배경에서 튀지 않는 금융 오렌지 */
+  --t-accent:         194 65 12;     /* #c2410c */
+  --t-accent-dim:     154 52 18;     /* #9a3412 */
 
-  /* 금융 시맨틱 — WCAG AA 이상 대비 확보 */
-  --t-green:          21 128 61;     /* #15803d  Tailwind green-700 */
-  --t-red:            185 28 28;     /* #b91c1c  Tailwind red-700 */
-  --t-blue:           29 78 216;     /* #1d4ed8  Tailwind blue-700 */
-  --t-yellow:         146 64 14;     /* #92400e  Tailwind amber-800 */
-  --t-gray:           100 116 139;   /* #64748b  Tailwind slate-500 */
+  /* 금융 시맨틱 — 배경색이 붙어도 글자가 읽히는 진한 톤 */
+  --t-green:          22 101 52;     /* #166534 */
+  --t-red:            153 27 27;     /* #991b1b */
+  --t-blue:           30 64 175;     /* #1e40af */
+  --t-yellow:         146 64 14;     /* #92400e */
+  --t-gray:           71 85 105;     /* #475569 */
 
-  /* 텍스트 — 슬레이트 계열, 명확한 계층 */
-  --t-text-primary:   15 23 42;      /* #0f172a  Tailwind slate-900 */
-  --t-text-secondary: 51 65 85;      /* #334155  Tailwind slate-700 */
-  --t-text-dim:       148 163 184;   /* #94a3b8  Tailwind slate-400 */
+  /* 텍스트 — 보조 글자도 흐리지 않게 단계 조정 */
+  --t-text-primary:   15 23 42;      /* #0f172a */
+  --t-text-secondary: 30 41 59;      /* #1e293b */
+  --t-text-dim:       71 85 105;     /* #475569 */
 
-  --c-bg-deep:   #f2f3f8;
-  --c-bg-card:   #f8f9fc;
+  --c-bg-deep:   #f6f8fc;
+  --c-bg-card:   #f8fafc;
   --c-bg-panel:  #ffffff;
-  --c-border:    #d8dbe6;
-  --c-border-md: #c8ccdb;
-  --c-scrollbar: #a8afc4;
+  --c-border:    #bac7d8;
+  --c-border-md: #94a3b8;
+  --c-scrollbar: #94a3b8;
 }
 
-/* ─── 하드코딩 hex → light mode 자동 오버라이드 ──────────────────────────── */
+/* ─── 하드코딩 dark color → light mode 자동 오버라이드 ───────────────────── */
 :root.light .bg-\[\#0a0a0a\],
 :root.light .bg-\[\#0b0b0b\],
 :root.light .bg-\[\#0c0c0c\],
-:root.light .bg-\[\#0d0d0d\] { background-color: var(--c-bg-panel) !important; }
+:root.light .bg-\[\#0d0d0d\],
+:root.light .bg-\[\#101010\],
+:root.light .bg-\[\#0c1324\] { background-color: var(--c-bg-panel) !important; }
 
+:root.light .bg-\[\#090909\],
 :root.light .bg-\[\#111\],
 :root.light .bg-\[\#111111\],
-:root.light .bg-\[\#131313\] { background-color: var(--c-bg-card) !important; }
+:root.light .bg-\[\#131313\],
+:root.light .bg-\[\#151515\],
+:root.light .bg-\[\#17120d\],
+:root.light .bg-\[\#1a1a1a\] { background-color: var(--c-bg-card) !important; }
 
 :root.light .bg-\[\#000\],
 :root.light .bg-black { background-color: var(--c-bg-deep) !important; }
 
+:root.light .border-\[\#171717\],
 :root.light .border-\[\#1a1a1a\],
+:root.light .border-\[\#1d1d1d\],
+:root.light .border-\[\#1e1e1e\],
+:root.light .border-\[\#1f1f1f\],
 :root.light .border-\[\#222\],
-:root.light .border-\[\#333\]  { border-color: var(--c-border) !important; }
+:root.light .border-\[\#262626\],
+:root.light .border-\[\#2a2a2a\],
+:root.light .border-\[\#2b2b2b\],
+:root.light .border-\[\#333\],
+:root.light .border-white\/10 { border-color: var(--c-border) !important; }
 
+:root.light .text-\[\#ededed\],
+:root.light .text-\[\#f2f2f2\],
+:root.light .text-\[\#f5f5f5\],
 :root.light .text-\[\#e0e0e0\],
-:root.light .text-\[\#ccc\]    { color: rgb(var(--t-text-primary)) !important; }
+:root.light .text-\[\#ddd\],
+:root.light .text-\[\#ccc\],
+:root.light .text-\[\#c8c8c8\],
+:root.light .text-\[\#c9c9c9\],
+:root.light .text-\[\#cfcfcf\],
+:root.light .text-white { color: rgb(var(--t-text-primary)) !important; }
 
+:root.light .text-\[\#777\],
 :root.light .text-\[\#888\],
-:root.light .text-\[\#999\]    { color: rgb(var(--t-text-secondary)) !important; }
+:root.light .text-\[\#999\],
+:root.light .text-\[\#aaa\],
+:root.light .text-\[\#bbb\],
+:root.light .text-\[\#a6a6a6\],
+:root.light .text-white\/65 { color: rgb(var(--t-text-secondary)) !important; }
 
+:root.light .text-\[\#333\],
+:root.light .text-\[\#444\],
 :root.light .text-\[\#555\],
-:root.light .text-\[\#666\]    { color: rgb(var(--t-text-dim)) !important; }
+:root.light .text-\[\#666\],
+:root.light .text-white\/55 { color: rgb(var(--t-text-dim)) !important; }
+
+:root.light .text-\[\#ff6600\],
+:root.light .text-\[\#ff8833\],
+:root.light .text-\[\#ffb066\] { color: rgb(var(--t-accent)) !important; }
+
+:root.light .text-\[\#3399ff\],
+:root.light .text-\[\#66b3ff\] { color: rgb(var(--t-blue)) !important; }
+
+:root.light .text-\[\#7bd389\] { color: rgb(var(--t-green)) !important; }
+
+:root.light .text-\[\#ffd166\] { color: rgb(var(--t-yellow)) !important; }
 
 /* toast 알림 라이트 모드 스타일 */
 :root.light [data-hot-toast] {
@@ -131,7 +172,7 @@ body {
 
 /* ─── Selection ──────────────────────────────────────────────────────────── */
 :root       ::selection { background: rgba(255,102,0,0.3);  color: #fff; }
-:root.light  ::selection { background: rgba(220,80,0,0.25); color: #fff; }
+:root.light  ::selection { background: rgba(194,65,12,0.20); color: rgb(var(--t-text-primary)); }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fadeIn {

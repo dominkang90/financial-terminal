@@ -32,9 +32,9 @@ export function MarketsPage() {
       </div>
 
       {/* 중앙 패널 */}
-      <div className="flex-1 overflow-y-auto bg-[#0a0a0a]">
+      <div className="flex-1 overflow-y-auto bg-terminal-bg">
         {/* 차트 헤더 */}
-        <div className="flex items-center justify-between border-b border-terminal-border bg-[#0d0d0d] px-3 py-2">
+        <div className="flex items-center justify-between border-b border-terminal-border bg-terminal-panel px-3 py-2">
           <div className="text-xs font-mono text-terminal-text-secondary">
             {activeSymbol} 차트
           </div>
@@ -54,7 +54,7 @@ export function MarketsPage() {
         </section>
 
         {/* 탭 바 */}
-        <div className="flex border-b border-terminal-border bg-[#0d0d0d]">
+        <div className="flex border-b border-terminal-border bg-terminal-panel">
           {TABS.map((tab) => (
             <button
               key={tab.id}

@@ -43,15 +43,15 @@ function articleMatchesSector(article: NewsArticle, sectorId: SectorFilterId) {
 const SENTIMENT_CONFIG = {
   positive: {
     label: "긍정", icon: TrendingUp,
-    bg: "bg-green-500/10", border: "border-green-500/30", text: "text-green-400",
+    bg: "bg-terminal-green/10", border: "border-terminal-green/30", text: "text-terminal-green",
   },
   negative: {
     label: "부정", icon: TrendingDown,
-    bg: "bg-red-500/10", border: "border-red-500/30", text: "text-red-400",
+    bg: "bg-terminal-red/10", border: "border-terminal-red/30", text: "text-terminal-red",
   },
   neutral: {
     label: "중립", icon: Minus,
-    bg: "bg-gray-500/10", border: "border-gray-500/30", text: "text-gray-400",
+    bg: "bg-terminal-gray/10", border: "border-terminal-gray/30", text: "text-terminal-gray",
   },
 };
 
@@ -72,6 +72,13 @@ function formatTime(dateStr: string): string {
   } catch { return "시간 확인 중"; }
 }
 
+function buildWhyImportant(article: NewsArticle) {
+  if (article.importance === "high") return "가격이나 업종 분위기에 영향을 줄 수 있어 먼저 확인해요.";
+  if (article.tickers.length > 0) return `관련 종목 ${article.tickers.slice(0, 2).join(", ")} 흐름을 볼 때 참고해요.`;
+  if (article.topic_label) return `${article.topic_label} 흐름을 이해하는 데 도움이 돼요.`;
+  return "시장 분위기를 넓게 보는 참고 뉴스예요.";
+}
+
 function MediaThumbnail({ article }: { article: NewsArticle }) {
   const [imgError, setImgError] = useState(false);
   const isVideo = article.media_type === "video";
@@ -80,8 +87,8 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
 
   if (!thumbUrl || imgError) {
     return (
-      <div className="w-full aspect-[16/9] bg-[#0d0d0d] border-b border-[#1d1d1d] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#555] text-2xs font-mono">
+      <div className="w-full aspect-[16/9] bg-terminal-bg/70 border-b border-terminal-border flex items-center justify-center">
+        <div className="flex items-center gap-2 text-terminal-text-dim text-2xs font-mono">
           <ImageOff size={12} />
           썸네일 없음
         </div>
@@ -90,8 +97,8 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
   }
 
   return (
-    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block relative border-b border-[#1d1d1d]">
-      <div className="w-full aspect-[16/9] overflow-hidden bg-[#0a0a0a] relative">
+    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block relative border-b border-terminal-border">
+      <div className="w-full aspect-[16/9] overflow-hidden bg-terminal-bg relative">
         <img
           src={thumbUrl}
           alt={article.title}
@@ -101,7 +108,7 @@ function MediaThumbnail({ article }: { article: NewsArticle }) {
         />
         {isVideo && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/15 transition-colors">
-            <div className="w-12 h-12 rounded-full bg-[#ff6600]/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-full bg-terminal-accent/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
               <Play size={20} className="text-white ml-1" fill="white" />
             </div>
           </div>
@@ -121,9 +128,10 @@ function NewsCard({ article }: { article: NewsArticle }) {
   const isVideo = article.media_type === "video";
   const mainUrl = isVideo ? (article.video_url || article.url) : article.url;
   const showLogo = Boolean(article.source_logo && !logoError);
+  const whyImportant = buildWhyImportant(article);
 
   return (
-    <div className="group bg-[#111] hover:bg-[#151515] border border-[#222] hover:border-[#333] rounded-xl overflow-hidden transition-all duration-200 flex flex-col h-full">
+    <div className="group bg-terminal-panel hover:bg-terminal-header border border-terminal-border hover:border-terminal-gray/60 rounded-xl overflow-hidden transition-all duration-200 flex flex-col h-full">
       <MediaThumbnail article={article} />
 
       <div className="p-3 space-y-3 flex-1 flex flex-col">
@@ -134,23 +142,23 @@ function NewsCard({ article }: { article: NewsArticle }) {
                 <img
                   src={article.source_logo || undefined}
                   alt={article.source}
-                  className="w-3.5 h-3.5 rounded-sm object-cover border border-[#2a2a2a]"
+                  className="w-3.5 h-3.5 rounded-sm object-cover border border-terminal-border"
                   loading="lazy"
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <Building2 size={11} className="text-[#666]" />
+                <Building2 size={11} className="text-terminal-text-dim" />
               )}
-              <span className="text-2xs font-mono text-[#777] truncate">{article.source}</span>
+              <span className="text-2xs font-mono text-terminal-text-dim truncate">{article.source}</span>
               {article.published_at && (
                 <>
-                  <span className="text-[#333]">·</span>
-                  <span className="text-2xs font-mono text-[#555]">{formatTime(article.published_at)}</span>
+                  <span className="text-terminal-border">·</span>
+                  <span className="text-2xs font-mono text-terminal-text-dim">{formatTime(article.published_at)}</span>
                 </>
               )}
             </div>
             <a href={mainUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <h3 className="text-sm font-medium text-[#ededed] leading-snug hover:text-[#ff6600] transition-colors line-clamp-2">
+              <h3 className="text-sm font-medium text-terminal-text-primary leading-snug hover:text-terminal-accent transition-colors line-clamp-2">
                 {title}
               </h3>
             </a>
@@ -163,21 +171,25 @@ function NewsCard({ article }: { article: NewsArticle }) {
         </div>
 
         {summary && (
-          <p className="text-xs text-[#8a8a8a] leading-relaxed line-clamp-3 min-h-[3.75rem]">
+          <p className="text-xs text-terminal-text-secondary leading-relaxed line-clamp-3 min-h-[3.75rem]">
             {summary}
           </p>
         )}
 
+        <div className="rounded-lg border border-terminal-border bg-terminal-bg/55 px-2 py-1.5 text-[11px] leading-4 text-terminal-text-secondary">
+          <span className="font-mono text-terminal-accent">왜 봐요? </span>{whyImportant}
+        </div>
+
         <div className="mt-auto pt-1 space-y-2">
           <div className="flex items-center gap-1 flex-wrap">
             {article.importance === "high" && (
-              <span className="text-2xs font-mono text-[#ff6600] bg-[#ff6600]/10 border border-[#ff6600]/30 px-1 rounded">HOT</span>
+              <span className="text-2xs font-mono text-terminal-accent bg-terminal-accent/10 border border-terminal-accent/30 px-1 rounded">HOT</span>
             )}
             {article.tickers.slice(0, 3).map((t) => (
-              <span key={t} className="text-2xs font-mono text-[#3399ff] bg-[#3399ff]/10 px-1 rounded">{t}</span>
+              <span key={t} className="text-2xs font-mono text-terminal-blue bg-terminal-blue/10 px-1 rounded">{t}</span>
             ))}
             {article.topic_label && (
-              <span className="text-2xs font-mono text-[#7bd389] bg-[#7bd389]/10 px-1 rounded">{article.topic_label}</span>
+              <span className="text-2xs font-mono text-terminal-green bg-terminal-green/10 px-1 rounded">{article.topic_label}</span>
             )}
           </div>
 
@@ -188,7 +200,7 @@ function NewsCard({ article }: { article: NewsArticle }) {
                   href={article.video_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-2xs font-mono text-[#ff6600] hover:text-[#ff8833] transition-colors"
+                  className="flex items-center gap-1 text-2xs font-mono text-terminal-accent hover:text-terminal-accent-dim transition-colors"
                 >
                   <Play size={9} />
                   영상 보기
@@ -197,14 +209,14 @@ function NewsCard({ article }: { article: NewsArticle }) {
               {article.title_ko && article.title_ko !== article.title && (
                 <button
                   onClick={() => setShowEn(!showEn)}
-                  className="text-2xs font-mono text-[#555] hover:text-[#888] transition-colors"
+                  className="text-2xs font-mono text-terminal-text-dim hover:text-terminal-text-secondary transition-colors"
                 >
                   {showEn ? "🇰🇷 한글" : "🇺🇸 원문"}
                 </button>
               )}
             </div>
 
-            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-[#444] hover:text-[#ff6600] transition-colors flex-shrink-0">
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-terminal-text-dim hover:text-terminal-accent transition-colors flex-shrink-0">
               <ExternalLink size={12} />
             </a>
           </div>
@@ -261,12 +273,12 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
   const videoCount = articles.filter((a) => a.media_type === "video").length;
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a]">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a] flex-shrink-0 flex-wrap">
-        <span className="text-xs font-mono text-[#888]">
+    <div className="flex flex-col h-full bg-terminal-bg">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border flex-shrink-0 flex-wrap">
+        <span className="text-xs font-mono text-terminal-text-secondary">
           {symbolFilter ? `${activeSymbol} 뉴스` : market === "us" ? "미국 주요 시장 뉴스" : "한국 주요 시장 뉴스"}
         </span>
-        <span className="text-2xs font-mono text-[#444] hidden sm:block">· 분야별로 빠르게 거르는 시장 뉴스</span>
+        <span className="text-2xs font-mono text-terminal-text-dim hidden sm:block">· 분야별로 빠르게 거르는 시장 뉴스</span>
         <div className="flex-1" />
         <div className="flex items-center gap-0.5 overflow-x-auto">
           {([
@@ -280,25 +292,25 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
               key={key}
               onClick={() => setFilter(key)}
               className={`px-2 py-0.5 text-2xs font-mono rounded whitespace-nowrap transition-colors ${
-                filter === key ? "bg-[#ff6600] text-black font-semibold" : "text-[#555] hover:text-[#888]"
+                filter === key ? "bg-terminal-accent text-white font-semibold" : "text-terminal-text-dim hover:text-terminal-text-secondary"
               }`}
             >
               {label}
             </button>
           ))}
         </div>
-        <button onClick={load} disabled={isLoading} className="text-[#444] hover:text-[#888] disabled:opacity-40 ml-1">
+        <button onClick={load} disabled={isLoading} className="text-terminal-text-dim hover:text-terminal-text-secondary disabled:opacity-40 ml-1">
           <RefreshCw size={11} className={isLoading ? "animate-spin" : ""} />
         </button>
-        <span className="text-2xs text-[#333] font-mono">{filtered.length}</span>
+        <span className="text-2xs text-terminal-border font-mono">{filtered.length}</span>
       </div>
 
       {isLoading && articles.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <RefreshCw size={20} className="animate-spin text-[#ff6600] mx-auto" />
-            <p className="text-xs text-[#555] font-mono">뉴스 + 한국어 번역 중...</p>
-            <p className="text-2xs text-[#333] font-mono">처음 로딩은 10~20초 걸려요</p>
+            <RefreshCw size={20} className="animate-spin text-terminal-accent mx-auto" />
+            <p className="text-xs text-terminal-text-dim font-mono">뉴스 + 한국어 번역 중...</p>
+            <p className="text-2xs text-terminal-border font-mono">처음 로딩은 10~20초 걸려요</p>
           </div>
         </div>
       )}
@@ -306,7 +318,7 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
       {(!isLoading || articles.length > 0) && (
         <div className="flex-1 overflow-y-auto p-3">
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
-            <span className="text-2xs font-mono text-[#555] mr-1">분야 필터</span>
+            <span className="text-2xs font-mono text-terminal-text-dim mr-1">분야 필터</span>
             {SECTOR_FILTERS.map((sector) => {
               const count = articles.filter((article) => articleMatchesSector(article, sector.id)).length;
               return (
@@ -316,8 +328,8 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
                   onClick={() => setSectorFilter(sector.id)}
                   className={`px-2 py-1 rounded text-2xs font-mono border ${
                     sectorFilter === sector.id
-                      ? "bg-[#ff6600]/10 text-[#ff8833] border-[#ff6600]/40"
-                      : "border-[#222] text-[#777] hover:text-[#bbb]"
+                      ? "bg-terminal-accent/10 text-terminal-accent border-terminal-accent/40"
+                      : "border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary"
                   }`}
                 >
                   {sector.label} {count > 0 ? count : ""}
@@ -327,15 +339,15 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
           </div>
 
           {sourceOptions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-3 border-b border-[#171717] pb-3">
-              <span className="text-2xs font-mono text-[#555] mr-1">매체 필터</span>
+            <div className="flex flex-wrap items-center gap-1.5 mb-3 border-b border-terminal-border pb-3">
+              <span className="text-2xs font-mono text-terminal-text-dim mr-1">매체 필터</span>
               <button
                 type="button"
                 onClick={() => setSourceFilter("all")}
                 className={`px-2 py-1 rounded text-2xs font-mono border ${
                   sourceFilter === "all"
-                    ? "bg-[#3399ff]/10 text-[#66b3ff] border-[#3399ff]/40"
-                    : "border-[#222] text-[#777] hover:text-[#bbb]"
+                    ? "bg-terminal-blue/10 text-terminal-blue border-terminal-blue/40"
+                    : "border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary"
                 }`}
               >
                 전체 {articles.length}
@@ -349,8 +361,8 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
                     onClick={() => setSourceFilter(source)}
                     className={`px-2 py-1 rounded text-2xs font-mono border ${
                       sourceFilter === source
-                        ? "bg-[#3399ff]/10 text-[#66b3ff] border-[#3399ff]/40"
-                        : "border-[#222] text-[#777] hover:text-[#bbb]"
+                        ? "bg-terminal-blue/10 text-terminal-blue border-terminal-blue/40"
+                        : "border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary"
                     }`}
                   >
                     {source} {count}
@@ -367,7 +379,7 @@ export function NewsFeed({ symbolFilter, market = "kr" }: { symbolFilter?: boole
           </div>
           {filtered.length === 0 && !isLoading && (
             <div className="flex items-center justify-center h-32">
-              <p className="text-xs text-[#444] font-mono">조건에 맞는 뉴스가 없습니다</p>
+              <p className="text-xs text-terminal-text-dim font-mono">조건에 맞는 뉴스가 없습니다</p>
             </div>
           )}
         </div>

@@ -77,14 +77,14 @@ const routines = [
 function SourcePreview({ article, title }: { article?: NewsArticle; title: string }) {
   if (article?.image) {
     return (
-      <div className="w-full h-24 rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#1f1f1f]">
+      <div className="w-full h-24 rounded-lg overflow-hidden bg-terminal-bg border border-terminal-border">
         <img src={article.image} alt={title} className="w-full h-full object-cover" loading="lazy" />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-24 rounded-lg border border-dashed border-[#2b2b2b] bg-[#101010] flex items-center justify-center gap-2 text-[#555]">
+    <div className="w-full h-24 rounded-lg border border-dashed border-terminal-border bg-terminal-bg/70 flex items-center justify-center gap-2 text-terminal-text-dim">
       <Images size={14} />
       <span className="text-2xs font-mono">썸네일 준비중</span>
     </div>
@@ -111,22 +111,22 @@ export function NewsDeskGuide({
 
   return (
     <div className="space-y-3 mb-4">
-      <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-3">
+      <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Newspaper size={14} className="text-[#ff6600]" />
-          <h3 className="text-xs font-semibold text-[#f5f5f5]">실전 뉴스 데스크</h3>
-          <span className="text-2xs font-mono text-[#555]">뉴스 + 공시 + 리포트 조합</span>
+          <Newspaper size={14} className="text-terminal-accent" />
+          <h3 className="text-xs font-semibold text-terminal-text-primary">실전 뉴스 데스크</h3>
+          <span className="text-2xs font-mono text-terminal-text-dim">뉴스 + 공시 + 리포트 조합</span>
         </div>
-        <p className="text-2xs text-[#777] leading-relaxed">
+        <p className="text-2xs text-terminal-text-secondary leading-relaxed">
           아래 카드에서 바로 기사 소스를 고르면, 그 매체 기사만 아래 목록에 모아서 볼 수 있어요. 공시와 리포트 카드는 원문 사이트로 바로 이동합니다.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-3">
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-3">
+        <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
           <div className="flex items-center gap-2 mb-3">
-            <ExternalLink size={14} className="text-[#3399ff]" />
-            <h3 className="text-xs font-semibold text-[#f5f5f5]">추천 정보 소스</h3>
+            <ExternalLink size={14} className="text-terminal-blue" />
+            <h3 className="text-xs font-semibold text-terminal-text-primary">추천 정보 소스</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {sourceCards.map((card) => {
@@ -148,27 +148,27 @@ export function NewsDeskGuide({
                   }}
                   className={`text-left rounded-lg border p-3 transition-colors ${
                     isSelected
-                      ? "border-[#ff6600]/50 bg-[#17120d]"
-                      : "border-[#1f1f1f] bg-[#111] hover:border-[#333] hover:bg-[#151515]"
+                      ? "border-terminal-accent/50 bg-terminal-accent/10"
+                      : "border-terminal-border bg-terminal-bg/60 hover:border-terminal-gray/60 hover:bg-terminal-header"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap text-2xs font-mono text-[#ff6600]">
+                      <div className="flex items-center gap-1.5 flex-wrap text-2xs font-mono text-terminal-accent">
                         <span>{card.subtitle}</span>
                         {liveCount !== null && (
-                          <span className="rounded bg-[#1a1a1a] px-1 py-0.5 text-[#cfcfcf]">{liveCount}건</span>
+                          <span className="rounded bg-terminal-bg px-1 py-0.5 text-terminal-text-secondary">{liveCount}건</span>
                         )}
-                        {isSelected && <span className="rounded bg-[#ff6600]/15 px-1 py-0.5 text-[#ffb066]">선택중</span>}
+                        {isSelected && <span className="rounded bg-terminal-accent/15 px-1 py-0.5 text-terminal-accent">선택중</span>}
                       </div>
-                      <div className="text-xs text-[#f2f2f2] mt-0.5">{card.title}</div>
+                      <div className="text-xs text-terminal-text-primary mt-0.5">{card.title}</div>
                     </div>
                     <a
                       href={card.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(event) => event.stopPropagation()}
-                      className="text-[#555] hover:text-[#999] flex-shrink-0"
+                      className="text-terminal-text-dim hover:text-terminal-text-secondary flex-shrink-0"
                     >
                       <ExternalLink size={12} />
                     </a>
@@ -178,9 +178,9 @@ export function NewsDeskGuide({
                     <SourcePreview article={preview} title={card.title} />
                   </div>
 
-                  <p className="mt-2 text-2xs text-[#777] leading-relaxed">{card.description}</p>
+                  <p className="mt-2 text-2xs text-terminal-text-secondary leading-relaxed">{card.description}</p>
                   {isFilterCard && (
-                    <div className="mt-2 text-2xs font-mono text-[#666]">
+                    <div className="mt-2 text-2xs font-mono text-terminal-text-dim">
                       {preview
                         ? `앱 안에서 실시간 기사 ${liveCount ?? 0}건 보기 가능`
                         : "기사 수집 중"}
@@ -192,11 +192,11 @@ export function NewsDeskGuide({
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-3 space-y-3">
+        <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3 space-y-3">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Bell size={14} className="text-[#ffd166]" />
-              <h3 className="text-xs font-semibold text-[#f5f5f5]">투자자 스타일별 추천</h3>
+              <Bell size={14} className="text-terminal-yellow" />
+              <h3 className="text-xs font-semibold text-terminal-text-primary">투자자 스타일별 추천</h3>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {(Object.entries(investorStyles) as [keyof typeof investorStyles, typeof selectedStyle][]).map(([key, style]) => (
@@ -206,32 +206,32 @@ export function NewsDeskGuide({
                   onClick={() => onInvestorStyleChange(key)}
                   className={`px-2 py-1 rounded text-2xs font-mono border ${
                     investorStyle === key
-                      ? "bg-[#ff6600] text-black border-[#ff6600]"
-                      : "border-[#262626] text-[#666] hover:text-[#999]"
+                      ? "bg-terminal-accent text-white border-terminal-accent"
+                      : "border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary"
                   }`}
                 >
                   {style.label}
                 </button>
               ))}
             </div>
-            <div className="space-y-2 rounded-lg border border-[#1f1f1f] bg-[#111] p-3">
+            <div className="space-y-2 rounded-lg border border-terminal-border bg-terminal-bg/60 p-3">
               {selectedStyle.points.map((point) => (
-                <div key={point} className="text-2xs text-[#c8c8c8] leading-relaxed">• {point}</div>
+                <div key={point} className="text-2xs text-terminal-text-secondary leading-relaxed">• {point}</div>
               ))}
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <FileText size={14} className="text-[#7bd389]" />
-              <h3 className="text-xs font-semibold text-[#f5f5f5]">오늘의 추천 루틴</h3>
+              <FileText size={14} className="text-terminal-green" />
+              <h3 className="text-xs font-semibold text-terminal-text-primary">오늘의 추천 루틴</h3>
             </div>
             <div className="space-y-2">
               {routines.map((routine) => (
-                <div key={routine.time} className="rounded-lg border border-[#1f1f1f] bg-[#111] p-2.5">
-                  <div className="text-2xs font-mono text-[#ff6600]">{routine.time}</div>
-                  <div className="text-xs text-[#f2f2f2] mt-1">{routine.title}</div>
-                  <div className="text-2xs text-[#777] mt-1 leading-relaxed">{routine.description}</div>
+                <div key={routine.time} className="rounded-lg border border-terminal-border bg-terminal-bg/60 p-2.5">
+                  <div className="text-2xs font-mono text-terminal-accent">{routine.time}</div>
+                  <div className="text-xs text-terminal-text-primary mt-1">{routine.title}</div>
+                  <div className="text-2xs text-terminal-text-secondary mt-1 leading-relaxed">{routine.description}</div>
                 </div>
               ))}
             </div>

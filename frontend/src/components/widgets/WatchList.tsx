@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, X, Star } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { useSettingsStore } from "@/store/settingsStore";
-import { ChangeValue } from "@/components/common/DataStatus";
+import { ChangeValue, MissingValue } from "@/components/common/DataStatus";
 import { StockIdentity } from "@/components/common/StockIdentity";
 import {
   canToggleCurrency,
@@ -78,10 +78,10 @@ export function WatchList() {
       </form>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-[minmax(150px,1fr)_auto_auto] gap-2 px-3 py-1 text-2xs text-terminal-text-dim font-mono border-b border-terminal-border">
+        <div className="grid grid-cols-[minmax(80px,1fr)_52px_44px] gap-1 px-3 py-1 text-2xs text-terminal-text-dim font-mono border-b border-terminal-border">
           <span>종목</span>
           <span className="text-right">가격</span>
-          <span className="text-right w-14">등락</span>
+          <span className="text-right">등락</span>
         </div>
 
         {watchlist.map((symbol) => {
@@ -96,7 +96,7 @@ export function WatchList() {
             <div
               key={symbol}
               onClick={() => setActiveSymbol(symbol)}
-              className={`group grid grid-cols-[minmax(150px,1fr)_auto_auto] gap-2 px-3 py-2 cursor-pointer transition-colors border-b border-terminal-border/50 ${
+              className={`group grid grid-cols-[minmax(80px,1fr)_52px_44px] gap-1 px-3 py-2 cursor-pointer transition-colors border-b border-terminal-border/50 ${
                 isActive
                   ? "bg-terminal-accent/10 border-l-2 border-l-terminal-accent"
                   : "hover:bg-terminal-border"
@@ -104,9 +104,9 @@ export function WatchList() {
             >
               <StockIdentity symbol={symbol} quote={q} compact active={isActive} />
 
-              <div className="text-right leading-tight">
+              <div className="text-right leading-tight whitespace-nowrap">
                 {q?.data_status === "error" || !q || !priceDisplay ? (
-                  <span className="text-2xs text-terminal-text-dim font-mono">—</span>
+                  <MissingValue label="확인 중" className="text-2xs" />
                 ) : (
                   <>
                     <div className="text-xs font-mono text-terminal-text-primary">
@@ -126,11 +126,11 @@ export function WatchList() {
                 )}
               </div>
 
-              <div className="text-right w-16 flex items-center justify-end gap-1">
+              <div className="text-right flex items-center justify-end gap-1 whitespace-nowrap">
                 {q && q.data_status !== "error" ? (
                   <ChangeBadge value={q.change_pct ?? 0} />
                 ) : (
-                  <span className="text-2xs text-terminal-text-dim font-mono">—</span>
+                  <MissingValue label="대기" className="text-2xs" />
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeFromWatchlist(symbol); }}

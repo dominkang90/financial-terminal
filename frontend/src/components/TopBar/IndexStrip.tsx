@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMarketStore } from "@/store/marketStore";
-import { ChangeValue, DataStatusBadge } from "@/components/common/DataStatus";
+import { ChangeValue, DataFreshnessLine, DataStatusBadge, MissingValue, getDataStatusLabel } from "@/components/common/DataStatus";
 
 function getMarketStatus(timeZone: string, openHm: number, closeHm: number) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -79,7 +79,7 @@ export function IndexStrip() {
           return (
             <div key={key} className="flex items-center gap-1.5 min-w-fit">
               <span className="text-2xs text-terminal-text-dim font-mono">{label}</span>
-              <span className="text-2xs text-terminal-text-dim font-mono">—</span>
+              <MissingValue label="확인 중" className="text-2xs" />
             </div>
           );
         }
@@ -88,11 +88,11 @@ export function IndexStrip() {
           <div
             key={key}
             className="flex items-center gap-1.5 min-w-fit cursor-default"
-            title={`출처: ${q.data_source || "제공처 확인 중"} · 상태: ${q.data_status || "제공처 기준"} · 확인: ${updatedAt || "확인 중"}`}
+            title={`출처: ${q.data_source || "제공처 확인 중"} · 상태: ${getDataStatusLabel(q.data_status)} · 확인: ${updatedAt || "확인 중"}`}
           >
             <span className="text-2xs text-terminal-text-secondary font-mono">{label}</span>
             <span className="text-xs font-mono text-terminal-text-primary">
-              {q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "—"}
+              {q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "확인 중"}
             </span>
             <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />
             {q.data_status && <DataStatusBadge status={q.data_status} className="hidden lg:inline" />}
@@ -100,10 +100,8 @@ export function IndexStrip() {
         );
       })}
 
-      {/* 지수 신뢰 안내 */}
-      <div className="hidden xl:flex items-center gap-1 min-w-fit text-[10px] font-mono text-terminal-text-dim">
-        <span>지수 출처/지연은 항목에 마우스를 올리면 보여요</span>
-        {updatedAt && <span>· 확인 {updatedAt}</span>}
+      <div className="hidden xl:block min-w-fit">
+        <DataFreshnessLine checkedAt={updatedAt} source="각 지수 제공처" status="delayed" />
       </div>
 
       {/* 구분선 */}
@@ -137,7 +135,7 @@ function ForexMini() {
     <div className="flex items-center gap-1.5 min-w-fit">
       <span className="text-2xs text-terminal-text-dim font-mono">USD/KRW</span>
       <span className="text-xs font-mono text-terminal-text-primary">
-        {usdkrw.price?.toLocaleString("ko-KR", { maximumFractionDigits: 0 }) ?? "—"}
+        {usdkrw.price?.toLocaleString("ko-KR", { maximumFractionDigits: 0 }) ?? "확인 중"}
       </span>
       <ChangeValue value={usdkrw.change_pct ?? 0} suffix="%" className="text-2xs" />
     </div>

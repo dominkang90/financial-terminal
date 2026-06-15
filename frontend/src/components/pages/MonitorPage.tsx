@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, Plus, RefreshCcw, Target, Trash2, Megaphone } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
-import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
+import { ChangeValue, DataFreshnessLine, MissingValue, formatNumber } from "@/components/common/DataStatus";
 import { StockIdentity } from "@/components/common/StockIdentity";
 
 const STORAGE_KEY = "price-monitor-alerts";
@@ -36,6 +36,14 @@ function getAlertStatus(alert: PriceAlert, price?: number) {
   return price <= alert.target ? "hit" : "watching";
 }
 
+function alertUsefulness(alert: PriceAlert, price?: number) {
+  if (typeof price !== "number") return "현재가가 들어오면 목표가와 거리를 계산해요.";
+  const distance = Math.abs((alert.target - price) / price) * 100;
+  if (distance < 1) return "현재가와 아주 가까워요. 곧 울릴 수 있어요.";
+  if (distance < 5) return "가까운 목표라 단기 확인용으로 쓸 수 있어요.";
+  return "거리가 있어 자주 울리기보다 큰 변화 확인용에 가까워요.";
+}
+
 export function MonitorPage() {
   const { watchlist, quotes, activeSymbol, setActiveSymbol, fetchWatchlistQuotes } = useMarketStore();
   const [alerts, setAlerts] = useState<PriceAlert[]>(() => loadAlerts());
@@ -43,12 +51,17 @@ export function MonitorPage() {
   const [targetInput, setTargetInput] = useState("");
   const [direction, setDirection] = useState<AlertDirection>("above");
   const [notifiedIds, setNotifiedIds] = useState<Set<string>>(() => new Set());
+  const [lastCheckedAt, setLastCheckedAt] = useState("");
   const canUseNotification = typeof window !== "undefined" && "Notification" in window;
   const notificationPermission = canUseNotification ? Notification.permission : "unsupported";
 
   useEffect(() => {
-    fetchWatchlistQuotes();
-    const id = setInterval(fetchWatchlistQuotes, 30_000);
+    const refresh = () => {
+      fetchWatchlistQuotes();
+      setLastCheckedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
+    };
+    refresh();
+    const id = setInterval(refresh, 30_000);
     return () => clearInterval(id);
   }, [fetchWatchlistQuotes]);
 
@@ -98,20 +111,23 @@ export function MonitorPage() {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#080808]">
-      <div className="flex flex-wrap items-center gap-3 border-b border-terminal-border bg-[#0d0d0d] px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden bg-terminal-bg">
+      <div className="flex flex-wrap items-center gap-3 border-b border-terminal-border bg-terminal-panel px-4 py-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-mono text-terminal-text-primary">
             <Bell size={15} className="text-terminal-accent" />
             실시간 감시판
           </div>
           <div className="mt-1 text-[11px] font-mono text-terminal-text-dim">
-            관심종목을 30초마다 다시 읽고, 큰 움직임과 목표가 도달을 한곳에서 봅니다.
+            관심종목을 30초마다 다시 읽고, 큰 움직임과 목표가 도달을 한곳에서 봅니다. 같은 목표가는 한 번만 알려드려요.
           </div>
         </div>
         <button
           type="button"
-          onClick={() => fetchWatchlistQuotes()}
+          onClick={() => {
+            fetchWatchlistQuotes();
+            setLastCheckedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
+          }}
           className="ml-auto inline-flex items-center gap-1 rounded border border-terminal-border px-2 py-1 text-xs font-mono text-terminal-text-secondary hover:text-terminal-text-primary"
         >
           <RefreshCcw size={12} />
@@ -142,13 +158,13 @@ export function MonitorPage() {
                 >
                   <StockIdentity symbol={symbol} quote={quote} active={isActive} subtitle={quote ? quote.exchange : "데이터 대기 중"} />
                   <div className="text-right text-xs font-mono text-terminal-text-primary">
-                    {quote ? formatNumber(quote.price, 2) : "—"}
+                    {quote ? formatNumber(quote.price, 2) : <MissingValue label="확인 중" className="text-xs" />}
                   </div>
                   <div className="text-right">
-                    {quote ? <ChangeValue value={quote.change_pct ?? 0} suffix="%" className="text-xs" /> : <span className="text-xs text-terminal-text-dim">—</span>}
+                    {quote ? <ChangeValue value={quote.change_pct ?? 0} suffix="%" className="text-xs" /> : <MissingValue label="대기" className="text-xs" />}
                   </div>
                   <div className="text-right">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${isHot ? "bg-terminal-yellow/15 text-terminal-yellow" : "bg-[#111] text-terminal-text-dim"}`}>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${isHot ? "bg-terminal-yellow/15 text-terminal-yellow" : "bg-terminal-bg text-terminal-text-dim"}`}>
                       {isHot ? "급변" : "감시"}
                     </span>
                   </div>
@@ -166,8 +182,12 @@ export function MonitorPage() {
             </div>
             <div className="space-y-2 text-[11px] font-mono text-terminal-text-secondary">
               <div>관심종목 급등락, 목표가 도달, AI 위험 신호를 한곳에서 확인해요.</div>
-              <div className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-terminal-text-dim">
-                현재 자동 감시: 목표가 도달 {hitAlerts.length}개 · 급변 종목 {monitorRows.filter(({ quote }) => Math.abs(quote?.change_pct ?? 0) >= 3).length}개
+              <div className="rounded border border-terminal-border bg-terminal-bg px-2 py-1 text-terminal-text-dim">
+                현재 자동 감시: 목표가 도달 {hitAlerts.length}개 · 급변 종목 {monitorRows.filter(({ quote }) => Math.abs(quote?.change_pct ?? 0) >= 3).length}개 · 확인 주기 30초
+                <DataFreshnessLine checkedAt={lastCheckedAt} source="관심종목 가격 제공처" status="delayed" className="mt-1" />
+              </div>
+              <div className="rounded border border-terminal-border bg-terminal-bg/40 px-2 py-1 leading-5 text-terminal-text-dim">
+                꼭 필요한 알림만 남겼어요: 목표가 도달, 하루 3% 이상 급변, 데이터 없음 상태입니다. 뉴스 요약은 알림 대신 화면에서 확인하게 했어요.
               </div>
               {canUseNotification && notificationPermission !== "granted" && (
                 <button
@@ -193,13 +213,13 @@ export function MonitorPage() {
                 <input
                   value={symbolInput}
                   onChange={(event) => setSymbolInput(event.target.value)}
-                  className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                  className="rounded border border-terminal-border bg-terminal-bg px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
                   placeholder="종목 예: NVDA"
                 />
                 <input
                   value={targetInput}
                   onChange={(event) => setTargetInput(event.target.value)}
-                  className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                  className="rounded border border-terminal-border bg-terminal-bg px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
                   placeholder="목표가"
                   inputMode="decimal"
                 />
@@ -208,7 +228,7 @@ export function MonitorPage() {
                 <select
                   value={direction}
                   onChange={(event) => setDirection(event.target.value as AlertDirection)}
-                  className="flex-1 rounded border border-terminal-border bg-[#090909] px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
+                  className="flex-1 rounded border border-terminal-border bg-terminal-bg px-2 py-1 text-xs font-mono text-terminal-text-primary outline-none focus:border-terminal-accent"
                 >
                   <option value="above">이 가격 이상</option>
                   <option value="below">이 가격 이하</option>
@@ -233,10 +253,13 @@ export function MonitorPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-mono text-terminal-text-primary">{alert.symbol}</div>
                       <div className="text-[10px] font-mono text-terminal-text-dim">
-                        현재 {quote ? formatNumber(quote.price, 2) : "—"} · 목표 {alert.direction === "above" ? "이상" : "이하"} {formatNumber(alert.target, 2)}
+                        현재 {quote ? formatNumber(quote.price, 2) : "확인 중"} · 목표 {alert.direction === "above" ? "이상" : "이하"} {formatNumber(alert.target, 2)}
+                      </div>
+                      <div className="mt-0.5 text-[10px] font-mono text-terminal-text-dim">
+                        {alertUsefulness(alert, quote?.price)}
                       </div>
                     </div>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${status === "hit" ? "bg-terminal-green/15 text-terminal-green" : "bg-[#111] text-terminal-text-dim"}`}>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${status === "hit" ? "bg-terminal-green/15 text-terminal-green" : "bg-terminal-bg text-terminal-text-dim"}`}>
                       {status === "hit" ? "도달" : "대기"}
                     </span>
                     <button

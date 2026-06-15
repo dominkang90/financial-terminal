@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Settings } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { marketApi } from "@/api/client";
-import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
+import { ChangeValue, DataFreshnessLine, MissingValue, formatNumber } from "@/components/common/DataStatus";
 import type { Quote } from "@/types";
 
 const SECTOR_ETFS: Record<string, string> = {
@@ -43,6 +43,7 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(() => loadSectionOrder());
   const [sectorQuotes, setSectorQuotes] = useState<Record<string, Quote>>({});
+  const [lastCheckedAt, setLastCheckedAt] = useState("");
 
   useEffect(() => {
     onCollapsedChange?.(collapsed);
@@ -60,17 +61,20 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
         setSectorQuotes(data);
       } catch {}
     };
+    const markChecked = () => setLastCheckedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
     fetchSectors();
     fetchCommodities();
     fetchRates();
     fetchIndices();
     fetchForex();
+    markChecked();
     const id = setInterval(() => {
       fetchSectors();
       fetchCommodities();
       fetchRates();
       fetchIndices();
       fetchForex();
+      markChecked();
     }, 60_000);
     return () => clearInterval(id);
   }, [fetchCommodities, fetchRates, fetchIndices, fetchForex]);
@@ -123,7 +127,7 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
 
   if (collapsed) {
     return (
-      <div className="flex h-full flex-col items-center gap-3 bg-[#0b0b0b] py-3">
+      <div className="flex h-full flex-col items-center gap-3 bg-terminal-bg py-3">
         <button
           type="button"
           onClick={() => setCollapsed(false)}
@@ -138,14 +142,14 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#0b0b0b]">
+    <div className="flex h-full flex-col overflow-hidden bg-terminal-bg">
       <div className="flex items-center justify-between border-b border-terminal-border px-2 py-1.5">
         <span className="text-2xs font-mono text-terminal-text-dim">시장 모멘텀 패널</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setSettingsOpen((prev) => !prev)}
-            className={`rounded border p-1 ${settingsOpen ? "border-[#ff6600]/50 text-[#ff8833]" : "border-terminal-border text-terminal-text-secondary hover:text-terminal-text-primary"}`}
+            className={`rounded border p-1 ${settingsOpen ? "border-terminal-accent/50 text-terminal-accent" : "border-terminal-border text-terminal-text-secondary hover:text-terminal-text-primary"}`}
             title="시장 모멘텀 순서 설정"
           >
             <Settings size={12} />
@@ -162,16 +166,16 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
       </div>
 
       {settingsOpen && (
-        <div className="border-b border-terminal-border bg-[#101010] px-2 py-2">
-          <div className="mb-1 text-[10px] font-mono text-[#777]">표시 순서</div>
+        <div className="border-b border-terminal-border bg-terminal-panel px-2 py-2">
+          <div className="mb-1 text-[10px] font-mono text-terminal-text-dim">표시 순서</div>
           <div className="space-y-1">
             {sectionOrder.map((sectionId, index) => (
-              <div key={sectionId} className="flex items-center gap-1 rounded border border-[#222] px-1.5 py-1 text-[10px] font-mono text-[#aaa]">
+              <div key={sectionId} className="flex items-center gap-1 rounded border border-terminal-border px-1.5 py-1 text-[10px] font-mono text-terminal-text-secondary">
                 <span className="min-w-0 flex-1 truncate">{sections[sectionId].title}</span>
-                <button type="button" onClick={() => moveSection(sectionId, -1)} disabled={index === 0} className="text-[#666] hover:text-[#ddd] disabled:opacity-25">
+                <button type="button" onClick={() => moveSection(sectionId, -1)} disabled={index === 0} className="text-terminal-text-dim hover:text-terminal-text-primary disabled:opacity-25">
                   <ChevronUp size={11} />
                 </button>
-                <button type="button" onClick={() => moveSection(sectionId, 1)} disabled={index === sectionOrder.length - 1} className="text-[#666] hover:text-[#ddd] disabled:opacity-25">
+                <button type="button" onClick={() => moveSection(sectionId, 1)} disabled={index === sectionOrder.length - 1} className="text-terminal-text-dim hover:text-terminal-text-primary disabled:opacity-25">
                   <ChevronDown size={11} />
                 </button>
               </div>
@@ -184,6 +188,9 @@ export function MarketPulse({ onCollapsedChange }: { onCollapsedChange?: (collap
         {sectionOrder.map((sectionId) => (
           <Section key={sectionId} title={sections[sectionId].title}>
             {sections[sectionId].rows}
+            <div className="border-t border-terminal-border/70 px-3 py-1.5">
+              <DataFreshnessLine checkedAt={lastCheckedAt} source="시장 데이터 제공처" status="delayed" />
+            </div>
           </Section>
         ))}
       </div>
@@ -195,7 +202,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-b border-terminal-border">
       <div className="px-3 py-1.5 bg-terminal-header">
-        <span className="block whitespace-normal break-keep pr-1 text-[11px] leading-4 font-mono text-[#a6a6a6]">
+        <span className="block whitespace-normal break-keep pr-1 text-[11px] leading-4 font-mono text-terminal-text-secondary">
           {title}
         </span>
       </div>
@@ -219,11 +226,11 @@ function SectorRow({
   return (
     <div className="px-3 py-1.5 hover:bg-terminal-border">
       <div className="flex items-center justify-between gap-1 mb-1">
-        <span className="text-[10px] font-mono text-[#c9c9c9] truncate" title={label}>{label}</span>
+        <span className="text-[10px] font-mono text-terminal-text-secondary truncate" title={label}>{label}</span>
         {hasData ? (
           <ChangeValue value={pct} suffix="%" className="text-[10px] shrink-0" />
         ) : (
-          <span className="text-[10px] text-terminal-text-dim font-mono shrink-0">—</span>
+          <MissingValue label="대기" className="text-[10px] shrink-0" />
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -235,8 +242,8 @@ function SectorRow({
             />
           )}
         </div>
-        <span className="text-[10px] font-mono text-[#ededed] w-14 text-right shrink-0">
-          {hasData ? `${pricePrefix}${formatNumber(q!.price, 2)}${priceSuffix}` : "—"}
+        <span className="text-[10px] font-mono text-terminal-text-primary w-14 text-right shrink-0">
+          {hasData ? `${pricePrefix}${formatNumber(q!.price, 2)}${priceSuffix}` : "확인 중"}
         </span>
       </div>
     </div>

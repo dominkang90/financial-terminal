@@ -44,7 +44,7 @@ function getSentimentMeta(sentiment?: string) {
   if (sentiment === "negative") {
     return { label: "BEARISH", className: "border-red-500/30 bg-red-500/10 text-red-400" };
   }
-  return { label: "NEUTRAL", className: "border-[#444] bg-[#1a1a1a] text-[#888]" };
+  return { label: "NEUTRAL", className: "border-terminal-gray/30 bg-terminal-gray/10 text-terminal-gray" };
 }
 
 function tierTone(tier?: string) {
@@ -108,10 +108,10 @@ function summaryCards(videos: NewsArticle[], marketScore: number) {
   const bearish = videos.filter((item) => item.sentiment === "negative").length;
   const neutral = videos.length - bullish - bearish;
   return [
-    { title: "시장 온도", value: `${marketScore}점`, hint: "영상 톤·중요도 반영 체감 점수", accent: "text-[#FFD27D]" },
-    { title: "상승 시각", value: `${bullish}건`, hint: "긍정적으로 해석한 채널", accent: "text-[#4ade80]" },
-    { title: "하락 경계", value: `${bearish}건`, hint: "리스크를 강조한 채널", accent: "text-[#f87171]" },
-    { title: "중립/관망", value: `${neutral}건`, hint: "팩트 확인 또는 방향성 대기", accent: "text-[#94a3b8]" },
+    { title: "시장 온도", value: `${marketScore}점`, hint: "영상 톤·중요도 반영 체감 점수", accent: "text-terminal-yellow" },
+    { title: "상승 시각", value: `${bullish}건`, hint: "긍정적으로 해석한 채널", accent: "text-terminal-green" },
+    { title: "하락 경계", value: `${bearish}건`, hint: "리스크를 강조한 채널", accent: "text-terminal-red" },
+    { title: "중립/관망", value: `${neutral}건`, hint: "팩트 확인 또는 방향성 대기", accent: "text-terminal-gray" },
   ];
 }
 
@@ -132,8 +132,8 @@ function FilterButton({
       className={cn(
         "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-mono transition",
         active
-          ? "border-[#ff6600]/40 bg-[#ff6600]/10 text-[#ff8833]"
-          : "border-[#222] bg-transparent text-[#666] hover:border-[#333] hover:text-[#aaa]",
+          ? "border-terminal-accent/40 bg-terminal-accent/10 text-terminal-accent"
+          : "border-terminal-border bg-transparent text-terminal-text-dim hover:border-terminal-gray/60 hover:text-terminal-text-primary",
       )}
     >
       <span>{label}</span>
@@ -144,27 +144,27 @@ function FilterButton({
 
 function MetricCard({ title, value, hint, accent }: { title: string; value: string; hint: string; accent: string }) {
   return (
-    <div className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3">
-      <div className="text-[10px] font-mono text-[#555]">{title}</div>
+    <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
+      <div className="text-[10px] font-mono text-terminal-text-dim">{title}</div>
       <div className={cn("mt-1 text-xl font-bold", accent)}>{value}</div>
-      <div className="mt-1 text-[10px] font-mono text-[#444]">{hint}</div>
+      <div className="mt-1 text-[10px] font-mono text-terminal-text-dim">{hint}</div>
     </div>
   );
 }
 
 function GuideLayerCard({ layer }: { layer: VideoDeskGuideLayer }) {
   return (
-    <div className="rounded-xl border border-[#222] bg-[#0d0d0d] p-3">
+    <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <div className="text-sm font-medium text-[#ddd]">{layer.label}</div>
+        <div className="text-sm font-medium text-terminal-text-primary">{layer.label}</div>
         <span className={cn("px-1.5 py-0.5 text-[10px] font-mono rounded border", tierTone(layer.tier))}>
           {layer.tier.toUpperCase()}
         </span>
       </div>
-      <div className="text-xs text-[#555] mb-3">{layer.description}</div>
+      <div className="text-xs text-terminal-text-dim mb-3">{layer.description}</div>
       <div className="flex flex-wrap gap-1.5">
         {layer.sources.map((source) => (
-          <span key={source} className="text-[10px] font-mono text-[#666] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">
+          <span key={source} className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">
             {source}
           </span>
         ))}
@@ -175,14 +175,14 @@ function GuideLayerCard({ layer }: { layer: VideoDeskGuideLayer }) {
 
 function ConsensusRow({ item }: { item: ChannelConsensusItem }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#222] bg-[#111] px-3 py-2.5 hover:border-[#333] transition">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-terminal-border bg-terminal-panel px-3 py-2.5 hover:border-terminal-gray/60 transition">
       <div className="min-w-0">
-        <div className="truncate text-sm font-medium text-[#ddd]">{item.source}</div>
-        <div className="truncate text-[10px] font-mono text-[#555]">{item.tier_label || item.layer_label || "시장 해석"}</div>
+        <div className="truncate text-sm font-medium text-terminal-text-primary">{item.source}</div>
+        <div className="truncate text-[10px] font-mono text-terminal-text-dim">{item.tier_label || item.layer_label || "시장 해석"}</div>
       </div>
       <div className="shrink-0 text-right">
-        <div className="text-xs font-mono font-semibold text-[#4ade80]">{item.stance}</div>
-        <div className="text-[10px] font-mono text-[#555]">{item.count}건</div>
+        <div className="text-xs font-mono font-semibold text-terminal-green">{item.stance}</div>
+        <div className="text-[10px] font-mono text-terminal-text-dim">{item.count}건</div>
       </div>
     </div>
   );
@@ -209,17 +209,17 @@ function VideoListCard({
       className={cn(
         "group relative w-full rounded-xl border p-3 text-left transition duration-200",
         active
-          ? "border-[#ff6600]/40 bg-[#151515]"
-          : "border-[#222] bg-[#111] hover:border-[#333] hover:bg-[#151515]",
+          ? "border-terminal-accent/40 bg-terminal-accent/10"
+          : "border-terminal-border bg-terminal-panel hover:border-terminal-gray/60 hover:bg-terminal-header",
       )}
     >
       {active && (
-        <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded border border-[#ff6600]/30 bg-[#ff6600]/10 p-1.5 text-[#ff8833] lg:flex">
+        <div className="pointer-events-none absolute -right-3 top-1/2 hidden -translate-y-1/2 rounded border border-terminal-accent/30 bg-terminal-accent/10 p-1.5 text-terminal-accent lg:flex">
           <ArrowRight size={12} />
         </div>
       )}
       <div className="flex gap-3">
-        <div className="relative h-[68px] w-[100px] shrink-0 overflow-hidden rounded-lg border border-[#1f1f1f] bg-[#0a0a0a]">
+        <div className="relative h-[68px] w-[100px] shrink-0 overflow-hidden rounded-lg border border-terminal-border bg-terminal-bg">
           <img
             src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
             alt={article.title}
@@ -235,26 +235,26 @@ function VideoListCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-mono text-[#ff8833]">{article.source}</span>
-              <span className="text-[#333]">·</span>
-              <span className="text-[10px] font-mono text-[#555]">{formatTime(article.published_at)}</span>
+              <span className="text-[10px] font-mono text-terminal-accent">{article.source}</span>
+              <span className="text-terminal-border">·</span>
+              <span className="text-[10px] font-mono text-terminal-text-dim">{formatTime(article.published_at)}</span>
             </div>
             <span className={cn("shrink-0 text-[10px] font-mono rounded border px-1.5 py-0.5", sentiment.className)}>
               {sentiment.label}
             </span>
           </div>
 
-          <div className="text-sm font-medium text-[#ededed] leading-snug line-clamp-2 mb-1.5">
+          <div className="text-sm font-medium text-terminal-text-primary leading-snug line-clamp-2 mb-1.5">
             {article.title_ko || article.title}
           </div>
 
-          <div className="mb-2 line-clamp-2 text-xs leading-5 text-[#9a9a9a]">
+          <div className="mb-2 line-clamp-2 text-xs leading-5 text-terminal-text-secondary">
             {(article.investment_points?.[0] || article.insight || article.summary_ko || article.summary || "").replace(/^제목·설명 기준으로 보면 핵심은 /, "")}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
             {tickers.map((t) => (
-              <span key={t} className="text-[10px] font-mono text-[#3399ff] bg-[#3399ff]/10 border border-[#3399ff]/20 px-1.5 py-0.5 rounded">
+              <span key={t} className="text-[10px] font-mono text-terminal-blue bg-terminal-blue/10 border border-terminal-blue/20 px-1.5 py-0.5 rounded">
                 ${t}
               </span>
             ))}
@@ -264,7 +264,7 @@ function VideoListCard({
               </span>
             )}
             {tags.map((tag) => (
-              <span key={tag} className="text-[10px] font-mono text-[#555] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">
+              <span key={tag} className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">
                 #{tag}
               </span>
             ))}
@@ -278,13 +278,13 @@ function VideoListCard({
 function DetailPanel({ article, overallInsight }: { article: NewsArticle | null; overallInsight?: string }) {
   if (!article) {
     return (
-      <div className="flex h-full min-h-[360px] items-center justify-center rounded-xl border border-dashed border-[#222] bg-[#111]">
+      <div className="flex h-full min-h-[360px] items-center justify-center rounded-xl border border-dashed border-terminal-border bg-terminal-panel">
         <div className="text-center">
-          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded border border-[#222] bg-[#161616]">
-            <Sparkles size={15} className="text-[#ff8833]" />
+          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded border border-terminal-border bg-terminal-bg/60">
+            <Sparkles size={15} className="text-terminal-accent" />
           </div>
-          <div className="text-sm font-medium text-[#aaa]">영상을 선택하세요</div>
-          <p className="mt-1 text-xs font-mono text-[#555]">리스트에서 영상을 고르면 분석을 표시합니다.</p>
+          <div className="text-sm font-medium text-terminal-text-secondary">영상을 선택하세요</div>
+          <p className="mt-1 text-xs font-mono text-terminal-text-dim">리스트에서 영상을 고르면 분석을 표시합니다.</p>
         </div>
       </div>
     );
@@ -308,13 +308,13 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
         transition={{ duration: 0.18 }}
         className="h-full"
       >
-        <div className="h-full rounded-xl border border-[#222] bg-[#111] overflow-hidden">
+        <div className="h-full rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
           <ScrollArea className="h-full max-h-[calc(100vh-190px)] lg:max-h-[calc(100vh-170px)]">
             <div className="p-4 space-y-3">
 
               {/* 헤더: 썸네일 + 제목 + 감성 */}
               <div className="flex items-start gap-3">
-                <div className="h-[64px] w-[92px] shrink-0 overflow-hidden rounded-lg border border-[#1f1f1f] bg-[#0a0a0a]">
+                <div className="h-[64px] w-[92px] shrink-0 overflow-hidden rounded-lg border border-terminal-border bg-terminal-bg">
                   <img
                     src={article.video_thumbnail || article.image || "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"}
                     alt={article.title}
@@ -326,11 +326,11 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     <span className={cn("text-[10px] font-mono rounded border px-1.5 py-0.5", sentiment.className)}>
                       {sentiment.label}
                     </span>
-                    <span className="text-[10px] font-mono text-[#ff8833]">{article.source}</span>
-                    <span className="text-[10px] font-mono text-[#555]">{formatDate(article.published_at)}</span>
-                    <span className="text-[10px] font-mono text-[#444]">{formatTime(article.published_at)}</span>
+                    <span className="text-[10px] font-mono text-terminal-accent">{article.source}</span>
+                    <span className="text-[10px] font-mono text-terminal-text-dim">{formatDate(article.published_at)}</span>
+                    <span className="text-[10px] font-mono text-terminal-text-dim">{formatTime(article.published_at)}</span>
                   </div>
-                  <div className="text-sm font-medium text-[#ddd] leading-5 line-clamp-3">
+                  <div className="text-sm font-medium text-terminal-text-primary leading-5 line-clamp-3">
                     {article.title_ko || article.title}
                   </div>
                 </div>
@@ -339,9 +339,9 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
               {/* 관련 종목 티커 */}
               {tickers.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-mono text-[#444]">관련종목</span>
+                  <span className="text-[10px] font-mono text-terminal-text-dim">관련종목</span>
                   {tickers.map((t) => (
-                    <span key={t} className="text-[10px] font-mono text-[#3399ff] bg-[#3399ff]/10 border border-[#3399ff]/30 px-1.5 py-0.5 rounded">
+                    <span key={t} className="text-[10px] font-mono text-terminal-blue bg-terminal-blue/10 border border-terminal-blue/30 px-1.5 py-0.5 rounded">
                       ${t}
                     </span>
                   ))}
@@ -356,17 +356,17 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                   </span>
                 )}
                 {article.layer_label && (
-                  <span className="text-[10px] font-mono text-[#666] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">
                     {article.layer_label}
                   </span>
                 )}
                 {article.region_label && (
-                  <span className="text-[10px] font-mono text-[#7899b4] border border-[#2a2a2a] bg-[#131313] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-terminal-blue border border-terminal-border bg-terminal-blue/10 px-1.5 py-0.5 rounded">
                     {article.region_label}
                   </span>
                 )}
                 {article.topic_label && (
-                  <span className="text-[10px] font-mono text-[#7bd389] border border-[#7bd389]/20 bg-[#7bd389]/5 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-terminal-green border border-terminal-green/20 bg-terminal-green/5 px-1.5 py-0.5 rounded">
                     {article.topic_label}
                   </span>
                 )}
@@ -374,7 +374,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                   "text-[10px] font-mono rounded border px-1.5 py-0.5",
                   hasVideoContent
                     ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-400"
-                    : "border-[#333] bg-[#1a1a1a] text-[#555]"
+                    : "border-terminal-border bg-terminal-bg/60 text-terminal-text-dim"
                 )}>
                   {article.content_basis === "transcript_ai"
                     ? "자막 AI 요약"
@@ -387,40 +387,40 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
               </div>
 
               {/* 핵심 요약 */}
-              <div className="rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-3">
-                <div className="text-[10px] font-mono text-[#ff8833] mb-2">[ 영상 핵심 ]</div>
-                <p className="text-[13px] leading-6 text-[#ccc]">
+              <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
+                <div className="text-[10px] font-mono text-terminal-accent mb-2">[ 영상 핵심 ]</div>
+                <p className="text-[13px] leading-6 text-terminal-text-primary">
                   {article.insight || overallInsight || "분석 요약을 준비 중입니다."}
                 </p>
                 {hasVideoContent && bullets.length > 0 && (
-                  <ul className="mt-3 space-y-2 border-t border-[#1a1a1a] pt-3">
+                  <ul className="mt-3 space-y-2 border-t border-terminal-border pt-3">
                     {bullets.map((bullet) => (
-                      <li key={bullet} className="flex gap-2 text-xs leading-5 text-[#999]">
-                        <span className="text-[#444] mt-0.5 shrink-0">▸</span>
+                      <li key={bullet} className="flex gap-2 text-xs leading-5 text-terminal-text-secondary">
+                        <span className="text-terminal-text-dim mt-0.5 shrink-0">▸</span>
                         <span>{bullet}</span>
                       </li>
                     ))}
                   </ul>
                 )}
                 {!hasVideoContent && (
-                  <div className="mt-2 pt-2 border-t border-[#1a1a1a] text-[10px] font-mono text-[#444]">
+                  <div className="mt-2 pt-2 border-t border-terminal-border text-[10px] font-mono text-terminal-text-dim">
                     자막 미확보 — 제목·설명 기준 분석입니다
                   </div>
                 )}
               </div>
 
               {/* 투자 체크포인트 */}
-              <div className="rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-3">
-                <div className="text-[10px] font-mono text-[#aaa] mb-2">[ 투자 체크포인트 ]</div>
+              <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
+                <div className="text-[10px] font-mono text-terminal-text-secondary mb-2">[ 투자 체크포인트 ]</div>
                 <ul className="space-y-2">
                   {actionBullets.map((bullet) => (
-                    <li key={bullet} className="flex gap-2 text-xs leading-5 text-[#ccc]">
-                      <span className="text-[#ff8833] mt-0.5 shrink-0">•</span>
+                    <li key={bullet} className="flex gap-2 text-xs leading-5 text-terminal-text-primary">
+                      <span className="text-terminal-accent mt-0.5 shrink-0">•</span>
                       <span>{bullet}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-3 pt-2 border-t border-[#1a1a1a] text-[10px] font-mono text-[#444]">
+                <div className="mt-3 pt-2 border-t border-terminal-border text-[10px] font-mono text-terminal-text-dim">
                   출처 관점: {article.source_role || article.layer_label || "전문가 해설"} | 매매 전 원문 확인 필수
                 </div>
               </div>
@@ -430,7 +430,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                 <div className="text-[10px] font-mono text-red-300/80 mb-2">[ 조심할 점 ]</div>
                 <ul className="space-y-2">
                   {riskBullets.map((bullet) => (
-                    <li key={bullet} className="flex gap-2 text-xs leading-5 text-[#b8b8b8]">
+                    <li key={bullet} className="flex gap-2 text-xs leading-5 text-terminal-text-secondary">
                       <span className="text-red-400/70 mt-0.5 shrink-0">!</span>
                       <span>{bullet}</span>
                     </li>
@@ -443,7 +443,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {tags.slice(0, 10).map((tag) => (
-                      <span key={tag} className="text-[10px] font-mono text-[#555] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">
+                      <span key={tag} className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">
                         #{tag}
                       </span>
                     ))}
@@ -454,7 +454,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded border border-[#222] bg-[#111] px-3 py-1.5 text-xs font-mono text-[#aaa] transition hover:border-[#333] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded border border-terminal-border bg-terminal-panel px-3 py-1.5 text-xs font-mono text-terminal-text-secondary transition hover:border-terminal-gray/60 hover:text-terminal-text-primary"
                   >
                     <ExternalLink size={11} />
                     원문
@@ -463,7 +463,7 @@ function DetailPanel({ article, overallInsight }: { article: NewsArticle | null;
                     href={article.video_url || article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded border border-[#ff6600]/25 bg-[#ff6600]/10 px-3 py-1.5 text-xs font-mono text-[#ff8833] transition hover:bg-[#ff6600]/15"
+                    className="inline-flex items-center gap-1.5 rounded border border-terminal-accent/25 bg-terminal-accent/10 px-3 py-1.5 text-xs font-mono text-terminal-accent transition hover:bg-terminal-accent/15"
                   >
                     <Play size={11} />
                     영상 열기
@@ -509,17 +509,17 @@ function InsightDashboard({
   const activeBullets = active ? splitBullets(active.insight, active.transcript_excerpt, active.summary_ko, active.summary).slice(0, 3) : [];
 
   return (
-    <div className="rounded-xl border border-[#222] bg-[#111] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a]">
-        <BarChart3 size={13} className="text-[#ff8833]" />
-        <span className="text-xs font-mono text-[#aaa]">AI 인사이트 대시보드</span>
-        <span className="ml-auto text-[10px] font-mono text-[#444]">MARKET SCORE</span>
-        <span className="text-sm font-bold text-[#FFD27D] font-mono">{marketScore}</span>
+    <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border">
+        <BarChart3 size={13} className="text-terminal-accent" />
+        <span className="text-xs font-mono text-terminal-text-secondary">AI 인사이트 대시보드</span>
+        <span className="ml-auto text-[10px] font-mono text-terminal-text-dim">MARKET SCORE</span>
+        <span className="text-sm font-bold text-terminal-yellow font-mono">{marketScore}</span>
       </div>
 
       <div className="p-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-3">
-          <p className="text-xs leading-5 text-[#666]">
+          <p className="text-xs leading-5 text-terminal-text-dim">
             {overallInsight || "유튜브 영상의 주제, 시장 톤, 실제 내용 확보율을 한 화면에서 보여줍니다."}
           </p>
 
@@ -531,88 +531,88 @@ function InsightDashboard({
 
           <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
             {[
-              { label: "분석 영상", value: `${videos.length}개`, sub: "필터 반영", color: "text-[#ddd]" },
-              { label: "내용 확보", value: `${contentReady}개`, sub: `${coveragePct}%`, color: "text-[#4ade80]" },
-              { label: "긍정/부정", value: `${bullish}/${bearish}`, sub: `중립 ${neutral}`, color: "text-[#94a3b8]" },
-              { label: "선택 채널", value: active ? active.source : "없음", sub: active?.topic_label || "카드를 선택", color: "text-[#ff8833]" },
+              { label: "분석 영상", value: `${videos.length}개`, sub: "필터 반영", color: "text-terminal-text-primary" },
+              { label: "내용 확보", value: `${contentReady}개`, sub: `${coveragePct}%`, color: "text-terminal-green" },
+              { label: "긍정/부정", value: `${bullish}/${bearish}`, sub: `중립 ${neutral}`, color: "text-terminal-gray" },
+              { label: "선택 채널", value: active ? active.source : "없음", sub: active?.topic_label || "카드를 선택", color: "text-terminal-accent" },
             ].map((item) => (
-              <div key={item.label} className="rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-2.5">
-                <div className="text-[10px] font-mono text-[#444]">{item.label}</div>
+              <div key={item.label} className="rounded-xl border border-terminal-border bg-terminal-panel p-2.5">
+                <div className="text-[10px] font-mono text-terminal-text-dim">{item.label}</div>
                 <div className={`mt-1 truncate text-base font-bold ${item.color}`}>{item.value}</div>
-                <div className="mt-0.5 text-[10px] font-mono text-[#555]">{item.sub}</div>
+                <div className="mt-0.5 text-[10px] font-mono text-terminal-text-dim">{item.sub}</div>
               </div>
             ))}
           </div>
 
-          <div className="rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-2.5">
-            <div className="flex items-center justify-between text-[10px] font-mono text-[#555] mb-1.5">
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel p-2.5">
+            <div className="flex items-center justify-between text-[10px] font-mono text-terminal-text-dim mb-1.5">
               <span>영상 내용 확보율</span>
               <span>{coveragePct}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#1a1a1a]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#ff6600] to-[#FFD27D]" style={{ width: `${coveragePct}%` }} />
+            <div className="h-1.5 overflow-hidden rounded-full bg-terminal-bg/70">
+              <div className="h-full rounded-full bg-gradient-to-r from-terminal-accent to-terminal-yellow" style={{ width: `${coveragePct}%` }} />
             </div>
-            <p className="mt-1.5 text-[10px] font-mono text-[#444]">
+            <p className="mt-1.5 text-[10px] font-mono text-terminal-text-dim">
               자막·AI 확보 영상은 실제 내용 기반, 나머지는 제목·설명 기준으로 구분합니다.
             </p>
           </div>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-1">
-          <div className="rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-3">
-            <div className="text-[10px] font-mono text-[#555] mb-2">분야 분포</div>
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
+            <div className="text-[10px] font-mono text-terminal-text-dim mb-2">분야 분포</div>
             <div className="space-y-2">
               {topicRows.length > 0 ? topicRows.map(([label, count]) => {
                 const pct = videos.length ? Math.round((count / videos.length) * 100) : 0;
                 return (
                   <div key={label}>
-                    <div className="flex items-center justify-between text-[10px] font-mono text-[#666] mb-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-terminal-text-dim mb-1">
                       <span>{label}</span>
                       <span>{count}개</span>
                     </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-[#1a1a1a]">
-                      <div className="h-full rounded-full bg-[#ff8833]" style={{ width: `${pct}%` }} />
+                    <div className="h-1 overflow-hidden rounded-full bg-terminal-bg/70">
+                      <div className="h-full rounded-full bg-terminal-accent" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 );
-              }) : <div className="text-[10px] font-mono text-[#444]">분야 데이터가 없습니다.</div>}
+              }) : <div className="text-[10px] font-mono text-terminal-text-dim">분야 데이터가 없습니다.</div>}
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#222] bg-[#111] p-3">
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="text-[10px] font-mono text-[#ff8833]">선택 영상 핵심</div>
+              <div className="text-[10px] font-mono text-terminal-accent">선택 영상 핵심</div>
               {active && (
-                <button type="button" onClick={() => onSelect(active)} className="text-[10px] font-mono text-[#666] hover:text-[#aaa] transition">
+                <button type="button" onClick={() => onSelect(active)} className="text-[10px] font-mono text-terminal-text-dim hover:text-terminal-text-secondary transition">
                   상세 열기 →
                 </button>
               )}
             </div>
             {active ? (
               <div className="space-y-2">
-                <div className="line-clamp-2 text-xs font-medium leading-5 text-[#ddd]">{active.title_ko || active.title}</div>
+                <div className="line-clamp-2 text-xs font-medium leading-5 text-terminal-text-primary">{active.title_ko || active.title}</div>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="text-[10px] font-mono text-[#777] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">{active.source}</span>
+                  <span className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">{active.source}</span>
                   <span className={cn(
                     "text-[10px] font-mono rounded border px-1.5 py-0.5",
                     active.transcript_available || active.content_basis === "video_ai" || active.content_basis === "transcript_ai"
                       ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-400"
-                      : "border-[#333] bg-[#1a1a1a] text-[#555]"
+                      : "border-terminal-border bg-terminal-bg/60 text-terminal-text-dim"
                   )}>
                     {active.content_basis === "transcript_ai" ? "자막AI" : active.transcript_available ? "자막" : active.content_basis === "video_ai" ? "영상AI" : "제목기준"}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
                   {(activeBullets.length ? activeBullets : [active.insight || active.summary_ko || active.summary || "요약 준비 중"]).map((bullet) => (
-                    <li key={bullet} className="flex gap-1.5 text-[11px] leading-5 text-[#888]">
-                      <span className="text-[#ff8833] shrink-0">•</span>
+                    <li key={bullet} className="flex gap-1.5 text-[11px] leading-5 text-terminal-text-secondary">
+                      <span className="text-terminal-accent shrink-0">•</span>
                       <span className="line-clamp-2">{bullet}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : (
-              <div className="text-[10px] font-mono text-[#444]">영상을 불러오면 핵심 요약을 표시합니다.</div>
+              <div className="text-[10px] font-mono text-terminal-text-dim">영상을 불러오면 핵심 요약을 표시합니다.</div>
             )}
           </div>
         </div>
@@ -720,22 +720,22 @@ export function VideoNewsFeed() {
   };
 
   return (
-    <div className="h-full overflow-hidden bg-[#0a0a0a] text-white">
+    <div className="h-full overflow-hidden bg-terminal-bg text-terminal-text-primary">
       <ScrollArea className="h-full px-4 py-3 md:px-5 md:py-4">
         <div className="mx-auto flex max-w-[1680px] flex-col gap-4 pb-6">
 
           {/* 헤더 + 필터 */}
-          <div className="rounded-xl border border-[#222] bg-[#111] overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a]">
-              <Sparkles size={13} className="text-[#ff8833]" />
-              <span className="text-xs font-mono text-[#aaa]">유튜브 뉴스 인사이트</span>
-              <span className="ml-auto text-[10px] font-mono text-[#444]">
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border">
+              <Sparkles size={13} className="text-terminal-accent" />
+              <span className="text-xs font-mono text-terminal-text-secondary">유튜브 뉴스 인사이트</span>
+              <span className="ml-auto text-[10px] font-mono text-terminal-text-dim">
                 업데이트 {payload ? formatTime(payload.updated_at) : "방금"}
               </span>
               <button
                 onClick={() => load(topic)}
                 disabled={isLoading}
-                className="inline-flex items-center gap-1 rounded border border-[#222] bg-transparent px-2 py-0.5 text-[10px] font-mono text-[#666] transition hover:border-[#333] hover:text-[#aaa] disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded border border-terminal-border bg-transparent px-2 py-0.5 text-[10px] font-mono text-terminal-text-dim transition hover:border-terminal-gray/60 hover:text-terminal-text-primary disabled:opacity-40"
               >
                 <RefreshCw size={10} className={isLoading ? "animate-spin" : ""} />
                 새로고침
@@ -750,14 +750,14 @@ export function VideoNewsFeed() {
                 ))}
               </div>
 
-              <div className="rounded-xl border border-[#222] bg-[#0d0d0d] p-2.5">
+              <div className="rounded-xl border border-terminal-border bg-terminal-panel p-2.5">
                 <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-mono text-[#777]">시장 온도 읽는 법</span>
+                  <span className="text-[10px] font-mono text-terminal-text-dim">시장 온도 읽는 법</span>
                   <span className={cn("rounded border px-1.5 py-0.5 text-[10px] font-mono", confidence.className)}>
                     {confidence.label}
                   </span>
                 </div>
-                <p className="text-[10px] font-mono leading-relaxed text-[#555]">
+                <p className="text-[10px] font-mono leading-relaxed text-terminal-text-dim">
                   50점은 중립이에요. 긍정/부정 영상 수, 채널 중요도, 주제 강도를 더해 체감 점수를 만들고, 내용 확보율 {coveragePct}%를 함께 봐야 해요.
                   내용 확보가 낮으면 실제 자막 분석이 아니라 제목·설명 추정에 가까워요.
                 </p>
@@ -765,7 +765,7 @@ export function VideoNewsFeed() {
 
               {/* 주제 필터 */}
               <div className="space-y-1.5">
-                <div className="text-[10px] font-mono text-[#444]">주제</div>
+                <div className="text-[10px] font-mono text-terminal-text-dim">주제</div>
                 <div className="flex flex-wrap gap-1.5">
                   {topics.map((item) => (
                     <FilterButton key={item.id} active={topic === item.id} label={item.label} onClick={() => setTopic(item.id)} />
@@ -776,7 +776,7 @@ export function VideoNewsFeed() {
               {/* 레이어 + 채널 필터 */}
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-mono text-[#444]">레이어</div>
+                  <div className="text-[10px] font-mono text-terminal-text-dim">레이어</div>
                   <div className="flex flex-wrap gap-1.5">
                     <FilterButton active={tier === "all"} label="전체" count={videos.length} onClick={() => setTier("all")} />
                     {tierFilters.map((item) => (
@@ -785,7 +785,7 @@ export function VideoNewsFeed() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-mono text-[#444]">채널</div>
+                  <div className="text-[10px] font-mono text-terminal-text-dim">채널</div>
                   <div className="flex max-h-[72px] flex-wrap gap-1.5 overflow-auto pr-1">
                     <FilterButton active={source === "all"} label="전체" count={videos.length} onClick={() => setSource("all")} />
                     {sourceFilters.map((item) => (
@@ -807,13 +807,13 @@ export function VideoNewsFeed() {
 
           {/* 레이어 가이드 */}
           {payload?.desk_guide?.layers?.length ? (
-            <div className="rounded-xl border border-[#222] bg-[#111] overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a]">
-                <ShieldCheck size={13} className="text-[#94a3b8]" />
-                <span className="text-xs font-mono text-[#888]">AI 투자 컨센서스 유튜브 레이어</span>
+            <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border">
+                <ShieldCheck size={13} className="text-terminal-gray" />
+                <span className="text-xs font-mono text-terminal-text-secondary">AI 투자 컨센서스 유튜브 레이어</span>
               </div>
               <div className="p-3 space-y-3">
-                <p className="text-[10px] font-mono text-[#444]">원천 데이터 → 전문가 해석 → 미래산업 순으로 읽게 구성했습니다.</p>
+                <p className="text-[10px] font-mono text-terminal-text-dim">원천 데이터 → 전문가 해석 → 미래산업 순으로 읽게 구성했습니다.</p>
                 <div className="grid gap-2 xl:grid-cols-3">
                   {payload.desk_guide.layers.map((layer) => (
                     <GuideLayerCard key={layer.id} layer={layer} />
@@ -824,7 +824,7 @@ export function VideoNewsFeed() {
                     <div className="text-[10px] font-mono text-red-400 mb-2">초기 서비스 제외 채널</div>
                     <div className="flex flex-wrap gap-1.5">
                       {payload.desk_guide.excluded.map((item) => (
-                        <span key={item} className="text-[10px] font-mono text-[#666] border border-[#222] bg-[#161616] px-1.5 py-0.5 rounded">
+                        <span key={item} className="text-[10px] font-mono text-terminal-text-dim border border-terminal-border bg-terminal-bg/60 px-1.5 py-0.5 rounded">
                           {item}
                         </span>
                       ))}
@@ -837,21 +837,21 @@ export function VideoNewsFeed() {
 
           {/* 뉴스 리스트 + 채널 컨센서스 */}
           <div className="space-y-4">
-            <div className="rounded-xl border border-[#222] bg-[#111] overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a]">
-                <span className="text-xs font-mono text-[#888]">뉴스 리스트</span>
-                <span className="ml-auto text-[10px] font-mono text-[#444]">총 {filteredVideos.length}건</span>
+            <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border">
+                <span className="text-xs font-mono text-terminal-text-secondary">뉴스 리스트</span>
+                <span className="ml-auto text-[10px] font-mono text-terminal-text-dim">총 {filteredVideos.length}건</span>
               </div>
               <div className="p-3">
                 {isLoading && filteredVideos.length === 0 ? (
                   <div className="flex h-[280px] items-center justify-center">
                     <div className="text-center space-y-2">
-                      <RefreshCw size={16} className="mx-auto animate-spin text-[#ff8833]" />
-                      <div className="text-[10px] font-mono text-[#555]">유튜브 영상 인사이트 정리 중...</div>
+                      <RefreshCw size={16} className="mx-auto animate-spin text-terminal-accent" />
+                      <div className="text-[10px] font-mono text-terminal-text-dim">유튜브 영상 인사이트 정리 중...</div>
                     </div>
                   </div>
                 ) : filteredVideos.length === 0 ? (
-                  <div className="flex h-[280px] items-center justify-center text-[10px] font-mono text-[#444]">
+                  <div className="flex h-[280px] items-center justify-center text-[10px] font-mono text-terminal-text-dim">
                     현재 조건에 맞는 영상이 없습니다.
                   </div>
                 ) : (
@@ -872,16 +872,16 @@ export function VideoNewsFeed() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-[#222] bg-[#111] overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1a1a]">
-                <Tags size={12} className="text-[#94a3b8]" />
-                <span className="text-xs font-mono text-[#888]">채널 컨센서스</span>
+            <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-terminal-border">
+                <Tags size={12} className="text-terminal-gray" />
+                <span className="text-xs font-mono text-terminal-text-secondary">채널 컨센서스</span>
               </div>
               <div className="p-3 space-y-2">
                 {filteredConsensus.length > 0 ? (
                   filteredConsensus.map((item) => <ConsensusRow key={`${item.source}-${item.stance}`} item={item} />)
                 ) : (
-                  <div className="text-[10px] font-mono text-[#444] py-2">현재 필터에 맞는 컨센서스가 없습니다.</div>
+                  <div className="text-[10px] font-mono text-terminal-text-dim py-2">현재 필터에 맞는 컨센서스가 없습니다.</div>
                 )}
               </div>
             </div>
@@ -893,15 +893,15 @@ export function VideoNewsFeed() {
         <SheetContent
           side={detailSide}
           className={cn(
-            "border-[#1f1f1f] bg-[#0b0b0b] p-0 text-white",
+            "border-terminal-border bg-terminal-panel p-0 text-terminal-text-primary",
             detailSide === "bottom" ? "lg:hidden" : "w-full max-w-[680px] border-l",
           )}
         >
-          <SheetHeader className="border-b border-[#1a1a1a] px-4 py-3 text-left">
-            <SheetTitle className="text-sm font-medium text-[#ddd]">
+          <SheetHeader className="border-b border-terminal-border px-4 py-3 text-left">
+            <SheetTitle className="text-sm font-medium text-terminal-text-primary">
               {selected ? selected.title_ko || selected.title : "영상 인사이트"}
             </SheetTitle>
-            <SheetDescription className="text-[10px] font-mono text-[#444]">
+            <SheetDescription className="text-[10px] font-mono text-terminal-text-dim">
               {selected ? `${selected.source} · ${formatTime(selected.published_at)}` : "카드를 클릭하면 분석 팝업이 열립니다."}
             </SheetDescription>
           </SheetHeader>

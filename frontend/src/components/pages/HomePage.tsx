@@ -149,6 +149,27 @@ function BriefChip({ label, value, tone = "neutral" }: { label: string; value: s
   );
 }
 
+function TrustNote() {
+  const notes = [
+    "숫자는 제공처 최근가라 지연될 수 있어요.",
+    "뉴스/영상 요약은 원문 제목·내용·자막 여부를 기준으로 나눠 보여줘요.",
+    "AI 설명은 참고용이에요. 매수·매도 결정은 스스로 확인해야 해요.",
+  ];
+
+  return (
+    <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
+      <div className="mb-2 text-[10px] font-mono text-terminal-accent uppercase tracking-widest">믿고 보기 위한 안내</div>
+      <div className="grid gap-2 md:grid-cols-3">
+        {notes.map((note) => (
+          <div key={note} className="rounded-lg border border-terminal-border bg-terminal-bg/35 px-3 py-2 text-[11px] leading-5 text-terminal-text-secondary">
+            {note}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MarketBrief({
   mood,
   avgChange,
@@ -219,11 +240,11 @@ function FriendlyGuide({ onTabChange, beginnerMode }: { onTabChange: (tab: TabId
             초보자 모드 {beginnerMode ? "켜짐" : "꺼짐"}
           </div>
           <p className="mt-2 text-sm leading-6 text-terminal-text-secondary">
-            어려운 금융 화면을 한 번에 다 볼 필요 없어요. 아래 버튼 중 하나만 눌러도 다음 행동으로 바로 이동해요.
+            어려운 말은 줄이고, 오늘 꼭 볼 것만 먼저 보여드릴게요. 아래 버튼 하나만 눌러도 다음 화면으로 갈 수 있어요.
           </p>
         </div>
 
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
           {actions.map(({ label, desc, tab, icon: Icon }) => (
             <button
               key={tab}
@@ -268,22 +289,24 @@ function TodayThreeLines({
     ? "오늘 시장은 대체로 힘이 있는 분위기예요."
     : avgChange < -0.3
       ? "오늘 시장은 조심해서 봐야 하는 분위기예요."
-      : "오늘 시장은 방향이 섞여 있어 차분히 확인하는 게 좋아요.";
+      : "오늘 시장은 오르는 곳과 내리는 곳이 섞여 있어요.";
   const techCount = videoData?.videos?.filter((item) => {
     const text = `${item.title} ${item.summary} ${item.topic_label ?? ""}`.toLowerCase();
     return text.includes("ai") || text.includes("tech") || text.includes("반도체") || text.includes("기술");
   }).length ?? 0;
   const newsLine = techCount > 0
-    ? `기술주/AI 관련 영상과 뉴스가 ${techCount}개 보여요.`
-    : "특정 업종보다 전체 시장 흐름을 먼저 보는 게 좋아요.";
+    ? `기술주와 AI 이야기가 ${techCount}개 보여요. 관련 종목은 뉴스 이유를 같이 보면 좋아요.`
+    : "눈에 띄는 한 업종보다 전체 시장 흐름을 먼저 보면 좋아요.";
   const fxLine = (usdkrw?.change_pct ?? 0) > 0.2
-    ? "원/달러가 오르면 수입 기업은 부담이 커질 수 있어요."
+    ? "원/달러가 오르면 해외 물건을 사오는 회사는 부담이 커질 수 있어요."
     : (usdkrw?.change_pct ?? 0) < -0.2
-      ? "원/달러가 내려가면 해외 자산 수익률은 달라질 수 있어요."
-      : "환율은 큰 변화보다 방향을 천천히 확인하면 좋아요.";
+      ? "원/달러가 내려가면 해외 주식의 원화 수익률이 달라질 수 있어요."
+      : "환율은 큰 변화보다 방향을 천천히 보면 돼요.";
   const vixLine = vix?.value != null && vix.value >= 20
-    ? "VIX가 높아 시장 불안이 커질 수 있어요."
-    : "VIX는 아직 과열 공포보다는 관찰 구간에 가까워요.";
+    ? "VIX가 높아 시장이 평소보다 흔들릴 수 있어요."
+    : vix?.value != null
+      ? "VIX는 아직 큰 공포보다 관찰 구간에 가까워요."
+      : "VIX 데이터는 확인 중이에요.";
   const lines = [marketLine, newsLine, fxLine, vixLine].slice(0, 3);
 
   return (
@@ -291,7 +314,7 @@ function TodayThreeLines({
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <div className="text-[10px] font-mono text-terminal-accent uppercase tracking-widest">오늘의 핵심 3줄</div>
-          <div className="mt-1 text-xs text-terminal-text-dim">처음 보는 사람도 바로 이해할 수 있게 쉬운 말로 요약했어요.</div>
+          <div className="mt-1 text-xs text-terminal-text-dim">시장·뉴스·환율 중 오늘 먼저 볼 것을 쉬운 말로 줄였어요.</div>
         </div>
         <div className="rounded-full border border-terminal-border px-2 py-1 text-[10px] font-mono text-terminal-text-dim">참고용</div>
       </div>
@@ -412,7 +435,7 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
 
   return (
     <div className="h-full overflow-y-auto bg-terminal-bg">
-      <div className="p-4 space-y-5 max-w-6xl mx-auto">
+      <div className="p-3 space-y-4 max-w-6xl mx-auto sm:p-4 sm:space-y-5">
 
         <FriendlyGuide onTabChange={onTabChange} beginnerMode={beginnerMode} />
 
@@ -453,6 +476,7 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
             {beginnerMode && (
               <TodayThreeLines avgChange={avgChange} vix={vixCard} usdkrw={usdkrwCard} videoData={videoData} />
             )}
+            <TrustNote />
           </>
         )}
 

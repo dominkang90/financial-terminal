@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, X } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import type { TabId } from "@/types";
 import { TopBar } from "@/components/TopBar/TopBar";
@@ -21,6 +21,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [watchlistCollapsed, setWatchlistCollapsed] = useState(false);
+  const [mobileWatchlistOpen, setMobileWatchlistOpen] = useState(false);
   const handledOAuthRef = useRef(false);
   const { fetchMe, finishOAuthLogin } = useAuthStore();
   const { theme } = useSettingsStore();
@@ -111,10 +112,46 @@ export default function App() {
             </div>
           )}
         </aside>
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMobileWatchlistOpen(true)}
+            className="absolute bottom-20 right-3 z-20 inline-flex items-center gap-1 rounded-full border border-terminal-border bg-terminal-panel/95 px-3 py-1.5 text-[11px] font-mono text-terminal-text-secondary shadow-sm backdrop-blur md:hidden"
+          >
+            <Star size={12} className="text-terminal-yellow" />
+            관심종목
+          </button>
           {renderPage()}
         </div>
       </main>
+      {mobileWatchlistOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden">
+          <button
+            type="button"
+            aria-label="관심종목 닫기"
+            onClick={() => setMobileWatchlistOpen(false)}
+            className="absolute inset-0 bg-black/35"
+          />
+          <section className="absolute bottom-0 left-0 right-0 flex max-h-[82vh] flex-col overflow-hidden rounded-t-2xl border border-terminal-border bg-terminal-panel shadow-2xl">
+            <div className="flex items-center justify-between border-b border-terminal-border px-4 py-3">
+              <div>
+                <div className="text-sm font-semibold text-terminal-text-primary">관심종목</div>
+                <div className="text-[11px] text-terminal-text-dim">모바일에서는 필요할 때만 열어 메인 화면을 넓게 써요.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileWatchlistOpen(false)}
+                className="rounded-full border border-terminal-border p-2 text-terminal-text-secondary"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <WatchList />
+            </div>
+          </section>
+        </div>
+      )}
       <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <Toaster

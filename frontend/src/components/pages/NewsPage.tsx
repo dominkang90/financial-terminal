@@ -21,13 +21,13 @@ export function NewsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMode("news")}
-              className={`text-xs font-mono px-2.5 py-1 rounded ${mode === "news" ? "bg-terminal-accent text-black" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
+              className={`text-xs font-mono px-2.5 py-1 rounded ${mode === "news" ? "bg-terminal-accent text-white" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
             >
               주요 뉴스
             </button>
             <button
               onClick={() => setMode("video")}
-              className={`text-xs font-mono px-2.5 py-1 rounded ${mode === "video" ? "bg-terminal-accent text-black" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
+              className={`text-xs font-mono px-2.5 py-1 rounded ${mode === "video" ? "bg-terminal-accent text-white" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
             >
               유튜브 뉴스
             </button>
@@ -40,7 +40,7 @@ export function NewsPage() {
                 <button
                   key={item.key}
                   onClick={() => setMarketFilter(item.key)}
-                  className={`text-xs font-mono px-2 py-0.5 rounded whitespace-nowrap ${marketFilter === item.key ? "bg-terminal-accent text-black" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
+                  className={`text-xs font-mono px-2 py-0.5 rounded whitespace-nowrap ${marketFilter === item.key ? "bg-terminal-accent text-white" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}
                 >
                   {item.label}
                 </button>

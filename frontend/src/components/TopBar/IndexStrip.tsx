@@ -97,7 +97,7 @@ export function IndexStrip() {
               {isUnreliable ? "확인 필요" : q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "확인 중"}
             </span>
             {!isUnreliable && <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />}
-            {q.data_status && <DataStatusBadge status={q.data_status} className="hidden lg:inline" />}
+            {q.data_status && !isUnreliable && <DataStatusBadge status={q.data_status} className="hidden lg:inline" />}
           </div>
         );
       })}

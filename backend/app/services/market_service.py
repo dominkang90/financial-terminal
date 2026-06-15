@@ -63,6 +63,9 @@ INDEX_SANITY_RANGES = {
     "VIX": (5, 100),
 }
 INDEX_DAILY_MOVE_LIMIT = 7.0
+INDEX_DAILY_MOVE_LIMITS = {
+    "VIX": 30.0,
+}
 
 YAHOO_HEADERS = {
     "User-Agent": (
@@ -488,7 +491,8 @@ def _mark_index_quality(name: str, quote: Dict[str, Any]) -> Dict[str, Any]:
     elif price < min_price or price > max_price:
         warnings.append(f"{name} 값이 평소 범위 밖이라 제공처 재확인이 필요해요.")
 
-    if abs(change_pct) > INDEX_DAILY_MOVE_LIMIT:
+    move_limit = INDEX_DAILY_MOVE_LIMITS.get(name, INDEX_DAILY_MOVE_LIMIT)
+    if abs(change_pct) > move_limit:
         warnings.append(f"{name} 하루 변동률이 크게 보여 제공처 재확인이 필요해요.")
 
     if warnings:

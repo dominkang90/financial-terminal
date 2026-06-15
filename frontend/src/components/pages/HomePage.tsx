@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import { marketApi, newsApi } from "@/api/client";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -386,10 +386,8 @@ function simpleInsightText(item: VideoNewsResponse["videos"][number]) {
   return text.length > 120 ? `${text.slice(0, 120)}…` : text;
 }
 
-function AIInsightSummary({ data, expanded, onToggle }: {
+function AIInsightSummary({ data }: {
   data: VideoNewsResponse;
-  expanded: boolean;
-  onToggle: () => void;
 }) {
   const highlights = (data.videos || []).slice(0, 3);
   const score = Number.isFinite(data.market_score) ? Math.round(data.market_score) : null;
@@ -427,20 +425,14 @@ function AIInsightSummary({ data, expanded, onToggle }: {
         왜 이렇게 말했나요? 위 3개는 최근 영상/뉴스 중 시장 전체에 영향을 줄 만한 제목과 설명을 먼저 고른 거예요. 자막이 없으면 제목·설명 기반이라 정확도가 낮을 수 있어요. 이 내용은 투자 추천이 아니라 읽을 순서를 돕는 참고용이에요.
       </div>
 
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-center gap-1 rounded-lg border border-terminal-border bg-terminal-bg/30 px-3 py-2 text-[11px] font-mono text-terminal-text-secondary transition hover:border-terminal-accent/50 hover:text-terminal-accent"
-      >
-        {expanded ? "자세한 AI 원문 접기" : "자세한 AI 원문 보기"}
-        <ChevronDown size={13} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
-
-      {expanded && (
-        <div className="rounded-lg border border-terminal-border bg-terminal-bg/35 p-3">
+      <details className="group rounded-lg border border-terminal-border bg-terminal-bg/30">
+        <summary className="cursor-pointer list-none px-3 py-2 text-center text-[11px] font-mono text-terminal-text-secondary transition hover:text-terminal-accent">
+          자세한 AI 원문 보기 / 접기
+        </summary>
+        <div className="border-t border-terminal-border p-3">
           <InsightBlock text={data.overall_insight} />
         </div>
-      )}
+      </details>
     </div>
   );
 }
@@ -454,7 +446,6 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
   const [loading, setLoading]         = useState(true);
   const [insightLoading, setInsightLoading] = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
-  const [showRawInsight, setShowRawInsight] = useState(false);
   const [clock, setClock]             = useState(new Date());
 
   const loadMarket = async () => {
@@ -671,11 +662,7 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
                 ))}
               </div>
             ) : videoData?.overall_insight ? (
-              <AIInsightSummary
-                data={videoData}
-                expanded={showRawInsight}
-                onToggle={() => setShowRawInsight((value) => !value)}
-              />
+              <AIInsightSummary data={videoData} />
             ) : (
               <div className="text-xs font-mono text-terminal-text-dim">인사이트를 불러올 수 없습니다.</div>
             )}

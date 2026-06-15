@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { marketApi, newsApi } from "@/api/client";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -374,6 +374,77 @@ function InsightBlock({ text }: { text: string }) {
   );
 }
 
+function basisLabel(basis?: string) {
+  if (basis === "transcript_ai" || basis === "transcript") return "자막 근거";
+  if (basis === "video_ai") return "영상 AI 근거";
+  return "제목·설명 근거";
+}
+
+function simpleInsightText(item: VideoNewsResponse["videos"][number]) {
+  const raw = item.insight || item.summary_ko || item.summary || item.title_ko || item.title;
+  const text = raw.replace(/^제목·설명으로 추정한 핵심:\s*/i, "").trim();
+  return text.length > 120 ? `${text.slice(0, 120)}…` : text;
+}
+
+function AIInsightSummary({ data, expanded, onToggle }: {
+  data: VideoNewsResponse;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const highlights = (data.videos || []).slice(0, 3);
+  const score = Number.isFinite(data.market_score) ? Math.round(data.market_score) : null;
+  const scoreLabel = score == null ? "확인 중" : score >= 65 ? "좋은 뉴스가 조금 우세" : score <= 35 ? "조심 신호가 조금 우세" : "좋고 나쁜 뉴스가 섞임";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-terminal-border bg-terminal-bg/35 px-3 py-2">
+        <div>
+          <div className="text-xs font-semibold text-terminal-text-primary">AI가 고른 오늘의 시장 읽기</div>
+          <div className="mt-1 text-[11px] leading-4 text-terminal-text-dim">뉴스와 영상 제목·설명·자막 가능 여부를 보고, 먼저 볼 내용만 3개로 줄였어요.</div>
+        </div>
+        <div className="rounded-lg border border-terminal-accent/30 bg-terminal-accent/10 px-3 py-2 text-right">
+          <div className="text-[10px] font-mono text-terminal-text-dim">시장 점수</div>
+          <div className="text-sm font-mono font-bold text-terminal-accent">{score ?? "--"}</div>
+          <div className="text-[10px] text-terminal-text-secondary">{scoreLabel}</div>
+        </div>
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-3">
+        {highlights.map((item, index) => (
+          <div key={item.id || item.url || index} className="rounded-lg border border-terminal-border bg-terminal-bg/45 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="rounded border border-terminal-border px-1.5 py-0.5 text-[10px] font-mono text-terminal-text-dim">핵심 {index + 1}</span>
+              <span className="text-[10px] font-mono text-terminal-yellow">{basisLabel(item.content_basis)}</span>
+            </div>
+            <div className="line-clamp-2 text-xs font-semibold leading-5 text-terminal-text-primary">{item.title_ko || item.title}</div>
+            <div className="mt-2 line-clamp-3 text-[11px] leading-5 text-terminal-text-secondary">{simpleInsightText(item)}</div>
+            <div className="mt-2 text-[10px] font-mono text-terminal-text-dim">출처: {item.source || item.channel || "확인 중"}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-terminal-border bg-terminal-bg/30 px-3 py-2 text-[11px] leading-5 text-terminal-text-dim">
+        왜 이렇게 말했나요? 위 3개는 최근 영상/뉴스 중 시장 전체에 영향을 줄 만한 제목과 설명을 먼저 고른 거예요. 자막이 없으면 제목·설명 기반이라 정확도가 낮을 수 있어요. 이 내용은 투자 추천이 아니라 읽을 순서를 돕는 참고용이에요.
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-center gap-1 rounded-lg border border-terminal-border bg-terminal-bg/30 px-3 py-2 text-[11px] font-mono text-terminal-text-secondary transition hover:border-terminal-accent/50 hover:text-terminal-accent"
+      >
+        {expanded ? "자세한 AI 원문 접기" : "자세한 AI 원문 보기"}
+        <ChevronDown size={13} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && (
+        <div className="rounded-lg border border-terminal-border bg-terminal-bg/35 p-3">
+          <InsightBlock text={data.overall_insight} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
   const { beginnerMode } = useSettingsStore();
   const [indices, setIndices]         = useState<Record<string, any>>({});
@@ -383,6 +454,7 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
   const [loading, setLoading]         = useState(true);
   const [insightLoading, setInsightLoading] = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
+  const [showRawInsight, setShowRawInsight] = useState(false);
   const [clock, setClock]             = useState(new Date());
 
   const loadMarket = async () => {
@@ -599,7 +671,11 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
                 ))}
               </div>
             ) : videoData?.overall_insight ? (
-              <InsightBlock text={videoData.overall_insight} />
+              <AIInsightSummary
+                data={videoData}
+                expanded={showRawInsight}
+                onToggle={() => setShowRawInsight((value) => !value)}
+              />
             ) : (
               <div className="text-xs font-mono text-terminal-text-dim">인사이트를 불러올 수 없습니다.</div>
             )}

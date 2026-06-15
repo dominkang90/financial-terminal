@@ -63,7 +63,9 @@ function formatTime(dateStr: string): string {
     if (isNaN(d.getTime())) return "시간 확인 중";
     const diff = Date.now() - d.getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < -5) return "시간 확인 중";
+    // 일부 RSS는 UTC/KST 시간이 섞여 가까운 미래 시각으로 들어와요.
+    // 사용자에게 고장처럼 보이지 않도록, 하루 이내 미래값은 방금 전으로 표시해요.
+    if (mins < -1440) return "시간 확인 중";
     if (mins < 1) return "방금 전";
     if (mins < 60) return `${mins}분 전`;
     const hours = Math.floor(mins / 60);

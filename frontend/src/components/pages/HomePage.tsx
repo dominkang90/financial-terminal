@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper, Bell, Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import { marketApi, newsApi } from "@/api/client";
+import { useSettingsStore } from "@/store/settingsStore";
 import type { TabId, VideoNewsResponse } from "@/types";
 
 interface IndexCard {
@@ -186,7 +187,7 @@ function MarketBrief({
   );
 }
 
-function FriendlyGuide({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
+function FriendlyGuide({ onTabChange, beginnerMode }: { onTabChange: (tab: TabId) => void; beginnerMode: boolean }) {
   const actions: Array<{ label: string; desc: string; tab: TabId; icon: typeof Search }> = [
     { label: "종목 보기", desc: "주가·차트부터 확인", tab: "markets", icon: Search },
     { label: "뉴스 읽기", desc: "오늘 이슈 빠르게 보기", tab: "news", icon: Newspaper },
@@ -194,12 +195,19 @@ function FriendlyGuide({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
     { label: "AI에게 묻기", desc: "어려운 내용 풀어보기", tab: "ai", icon: Bot },
   ];
 
-  const terms = [
+  const baseTerms = [
     { word: "VIX", meaning: "시장이 얼마나 불안한지 보는 온도계예요." },
     { word: "원/달러", meaning: "달러 1개를 사는 데 필요한 원화 가격이에요." },
     { word: "지수", meaning: "여러 종목을 묶어 시장 전체 흐름을 보는 숫자예요." },
     { word: "최근가", meaning: "제공처가 마지막으로 알려준 가격이에요. 실시간이 아닐 수 있어요." },
   ];
+  const beginnerTerms = [
+    { word: "PER", meaning: "회사 이익에 비해 주가가 비싼지 보는 숫자예요." },
+    { word: "PBR", meaning: "회사가 가진 자산에 비해 주가가 비싼지 보는 숫자예요." },
+    { word: "EPS", meaning: "주식 1주가 벌어들인 회사 이익이에요." },
+    { word: "시총", meaning: "주가에 전체 주식 수를 곱한 회사 크기예요." },
+  ];
+  const terms = beginnerMode ? [...baseTerms, ...beginnerTerms] : baseTerms;
 
   return (
     <div className="rounded-xl border border-terminal-accent/25 bg-gradient-to-br from-terminal-panel to-terminal-bg p-4">
@@ -207,6 +215,9 @@ function FriendlyGuide({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
         <div className="min-w-0 lg:w-5/12">
           <div className="text-[10px] font-mono text-terminal-accent uppercase tracking-widest">처음 오셨나요?</div>
           <h1 className="mt-2 text-lg font-semibold text-terminal-text-primary">오늘은 여기서 시작하면 돼요</h1>
+          <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-[10px] font-mono ${beginnerMode ? "border-terminal-accent/40 bg-terminal-accent/10 text-terminal-accent" : "border-terminal-border text-terminal-text-dim"}`}>
+            초보자 모드 {beginnerMode ? "켜짐" : "꺼짐"}
+          </div>
           <p className="mt-2 text-sm leading-6 text-terminal-text-secondary">
             어려운 금융 화면을 한 번에 다 볼 필요 없어요. 아래 버튼 중 하나만 눌러도 다음 행동으로 바로 이동해요.
           </p>
@@ -235,6 +246,60 @@ function FriendlyGuide({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
           <div key={term.word} className="rounded-lg border border-terminal-border bg-terminal-bg/30 px-3 py-2">
             <div className="text-[10px] font-mono font-semibold text-terminal-yellow">{term.word}</div>
             <div className="mt-1 text-[11px] leading-4 text-terminal-text-dim">{term.meaning}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TodayThreeLines({
+  avgChange,
+  vix,
+  usdkrw,
+  videoData,
+}: {
+  avgChange: number;
+  vix?: IndexCard;
+  usdkrw?: IndexCard;
+  videoData: VideoNewsResponse | null;
+}) {
+  const marketLine = avgChange > 0.3
+    ? "오늘 시장은 대체로 힘이 있는 분위기예요."
+    : avgChange < -0.3
+      ? "오늘 시장은 조심해서 봐야 하는 분위기예요."
+      : "오늘 시장은 방향이 섞여 있어 차분히 확인하는 게 좋아요.";
+  const techCount = videoData?.videos?.filter((item) => {
+    const text = `${item.title} ${item.summary} ${item.topic_label ?? ""}`.toLowerCase();
+    return text.includes("ai") || text.includes("tech") || text.includes("반도체") || text.includes("기술");
+  }).length ?? 0;
+  const newsLine = techCount > 0
+    ? `기술주/AI 관련 영상과 뉴스가 ${techCount}개 보여요.`
+    : "특정 업종보다 전체 시장 흐름을 먼저 보는 게 좋아요.";
+  const fxLine = (usdkrw?.change_pct ?? 0) > 0.2
+    ? "원/달러가 오르면 수입 기업은 부담이 커질 수 있어요."
+    : (usdkrw?.change_pct ?? 0) < -0.2
+      ? "원/달러가 내려가면 해외 자산 수익률은 달라질 수 있어요."
+      : "환율은 큰 변화보다 방향을 천천히 확인하면 좋아요.";
+  const vixLine = vix?.value != null && vix.value >= 20
+    ? "VIX가 높아 시장 불안이 커질 수 있어요."
+    : "VIX는 아직 과열 공포보다는 관찰 구간에 가까워요.";
+  const lines = [marketLine, newsLine, fxLine, vixLine].slice(0, 3);
+
+  return (
+    <div className="rounded-xl border border-terminal-accent/25 bg-terminal-panel p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] font-mono text-terminal-accent uppercase tracking-widest">오늘의 핵심 3줄</div>
+          <div className="mt-1 text-xs text-terminal-text-dim">처음 보는 사람도 바로 이해할 수 있게 쉬운 말로 요약했어요.</div>
+        </div>
+        <div className="rounded-full border border-terminal-border px-2 py-1 text-[10px] font-mono text-terminal-text-dim">참고용</div>
+      </div>
+      <div className="space-y-2">
+        {lines.map((line, index) => (
+          <div key={line} className="flex gap-2 rounded-lg border border-terminal-border bg-terminal-bg/35 px-3 py-2 text-xs text-terminal-text-secondary">
+            <span className="font-mono text-terminal-accent">{index + 1}</span>
+            <span>{line}</span>
           </div>
         ))}
       </div>
@@ -275,6 +340,7 @@ function InsightBlock({ text }: { text: string }) {
 }
 
 export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void }) {
+  const { beginnerMode } = useSettingsStore();
   const [indices, setIndices]         = useState<Record<string, any>>({});
   const [forex, setForex]             = useState<Record<string, any>>({});
   const [commodities, setCommodities] = useState<Record<string, any>>({});
@@ -348,7 +414,7 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
     <div className="h-full overflow-y-auto bg-terminal-bg">
       <div className="p-4 space-y-5 max-w-6xl mx-auto">
 
-        <FriendlyGuide onTabChange={onTabChange} />
+        <FriendlyGuide onTabChange={onTabChange} beginnerMode={beginnerMode} />
 
         {/* ── 상단 상태 바 ─────────────────────────────────── */}
         <div className="flex flex-wrap items-stretch gap-2">
@@ -376,13 +442,18 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
         </div>
 
         {!loading && (
-          <MarketBrief
-            mood={marketMood}
-            avgChange={avgChange}
-            vix={vixCard}
-            usdkrw={usdkrwCard}
-            oil={oilCard}
-          />
+          <>
+            <MarketBrief
+              mood={marketMood}
+              avgChange={avgChange}
+              vix={vixCard}
+              usdkrw={usdkrwCard}
+              oil={oilCard}
+            />
+            {beginnerMode && (
+              <TodayThreeLines avgChange={avgChange} vix={vixCard} usdkrw={usdkrwCard} videoData={videoData} />
+            )}
+          </>
         )}
 
         {/* ── 미국 지수 ──────────────────────────────────── */}

@@ -3,6 +3,7 @@ AI 분석 서비스. Gemini API 키가 있으면 사용하고,
 없으면 규칙 기반 간단 분석으로 폴백.
 """
 import asyncio
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
 from app.core.config import settings
@@ -33,6 +34,27 @@ async def _generate_gemini_text(prompt: str, api_key: str) -> Dict[str, str]:
         except Exception as exc:
             last_error = f"{model_name}: {exc}"
     raise RuntimeError(last_error or "Gemini response failed")
+
+
+def _build_evidence(symbol: str = "", quote: Optional[Dict] = None, news: Optional[List[Dict]] = None, method: str = "rule_based") -> Dict[str, Any]:
+    news_items = news or []
+    quote_status = quote.get("data_status") if isinstance(quote, dict) else None
+    price = quote.get("price") if isinstance(quote, dict) else None
+    currency = quote.get("currency") if isinstance(quote, dict) else None
+    source = quote.get("data_source") if isinstance(quote, dict) else None
+    return {
+        "symbol": symbol,
+        "method": method,
+        "price": price,
+        "currency": currency,
+        "price_source": source or quote_status or "앱 시장 데이터",
+        "news_count": len(news_items),
+        "news_titles": [item.get("title_ko") or item.get("title") for item in news_items[:3] if item.get("title_ko") or item.get("title")],
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "transcript_used": False,
+        "transcript_note": "종목 AI 답변은 가격/뉴스 자료 기준이며, 유튜브 자막은 사용하지 않았어요.",
+        "disclaimer": "투자 추천이 아니라 참고용 설명입니다.",
+    }
 
 
 def _rule_based_analysis(quote: Dict, news_sentiment: str = "neutral") -> str:
@@ -104,6 +126,7 @@ async def analyze_stock(
             "analysis": _rule_based_analysis(quote or {}, news_sentiment),
             "method": "rule_based",
             "note": "",
+            "evidence": _build_evidence(symbol, quote, news, "rule_based"),
         }
 
     try:
@@ -141,12 +164,14 @@ P/E: {quote.get('pe_ratio', 'N/A')}
             "analysis": response["text"],
             "method": "gemini",
             "model": response["model"],
+            "evidence": _build_evidence(symbol, quote, news, "gemini"),
         }
     except Exception as e:
         return {
             "analysis": _rule_based_analysis(quote or {}, news_sentiment),
             "method": "rule_based_fallback",
             "error": f"Gemini 오류: {str(e)}",
+            "evidence": _build_evidence(symbol, quote, news, "rule_based_fallback"),
         }
 
 
@@ -199,13 +224,17 @@ async def chat_with_ai(
     message: str,
     context: Optional[Dict] = None,
     user_api_key: Optional[str] = None,
+    news: Optional[List[Dict]] = None,
 ) -> Dict[str, Any]:
     api_key = user_api_key or settings.GEMINI_API_KEY
 
     if not api_key:
+        symbol = context.get("symbol", "") if context else ""
+        quote = context.get("quote") if context else None
         return {
             "reply": _rule_based_chat(message, context),
             "method": "rule_based",
+            "evidence": _build_evidence(symbol, quote, news, "rule_based"),
         }
 
     try:
@@ -213,9 +242,14 @@ async def chat_with_ai(
         full_prompt = f"{system}\n\n사용자: {message}"
 
         response = await _generate_gemini_text(full_prompt, api_key)
-        return {"reply": response["text"], "method": "gemini", "model": response["model"]}
+        symbol = context.get("symbol", "") if context else ""
+        quote = context.get("quote") if context else None
+        return {"reply": response["text"], "method": "gemini", "model": response["model"], "evidence": _build_evidence(symbol, quote, news, "gemini")}
     except Exception:
+        symbol = context.get("symbol", "") if context else ""
+        quote = context.get("quote") if context else None
         return {
             "reply": _rule_based_chat(message, context),
             "method": "rule_based_fallback",
+            "evidence": _build_evidence(symbol, quote, news, "rule_based_fallback"),
         }

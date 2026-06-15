@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Plus, RefreshCcw, Target, Trash2 } from "lucide-react";
+import { Bell, Plus, RefreshCcw, Target, Trash2, Megaphone } from "lucide-react";
 import { useMarketStore } from "@/store/marketStore";
 import { ChangeValue, formatNumber } from "@/components/common/DataStatus";
 import { StockIdentity } from "@/components/common/StockIdentity";
@@ -42,6 +42,9 @@ export function MonitorPage() {
   const [symbolInput, setSymbolInput] = useState(activeSymbol);
   const [targetInput, setTargetInput] = useState("");
   const [direction, setDirection] = useState<AlertDirection>("above");
+  const [notifiedIds, setNotifiedIds] = useState<Set<string>>(() => new Set());
+  const canUseNotification = typeof window !== "undefined" && "Notification" in window;
+  const notificationPermission = canUseNotification ? Notification.permission : "unsupported";
 
   useEffect(() => {
     fetchWatchlistQuotes();
@@ -62,6 +65,25 @@ export function MonitorPage() {
   const hitAlerts = useMemo(() => (
     alerts.filter((alert) => getAlertStatus(alert, quotes[alert.symbol]?.price) === "hit")
   ), [alerts, quotes]);
+
+
+  useEffect(() => {
+    hitAlerts.forEach((alert) => {
+      if (notifiedIds.has(alert.id)) return;
+      const quote = quotes[alert.symbol];
+      if (notificationPermission === "granted") {
+        new Notification(`FinTerminal 알림: ${alert.symbol}`, {
+          body: `목표가 ${formatNumber(alert.target, 2)}에 도달했어요. 현재가 ${quote ? formatNumber(quote.price, 2) : "확인 중"}`,
+        });
+      }
+      setNotifiedIds((prev) => new Set(prev).add(alert.id));
+    });
+  }, [hitAlerts, notifiedIds, notificationPermission, quotes]);
+
+  const requestNotification = async () => {
+    if (!canUseNotification || Notification.permission === "granted") return;
+    await Notification.requestPermission();
+  };
 
   const addAlert = (event: React.FormEvent) => {
     event.preventDefault();
@@ -137,6 +159,29 @@ export function MonitorPage() {
         </section>
 
         <aside className="space-y-3">
+          <section className="rounded border border-terminal-border bg-terminal-panel p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-mono text-terminal-text-primary">
+              <Megaphone size={13} className="text-terminal-accent" />
+              알림 센터
+            </div>
+            <div className="space-y-2 text-[11px] font-mono text-terminal-text-secondary">
+              <div>관심종목 급등락, 목표가 도달, AI 위험 신호를 한곳에서 확인해요.</div>
+              <div className="rounded border border-terminal-border bg-[#090909] px-2 py-1 text-terminal-text-dim">
+                현재 자동 감시: 목표가 도달 {hitAlerts.length}개 · 급변 종목 {monitorRows.filter(({ quote }) => Math.abs(quote?.change_pct ?? 0) >= 3).length}개
+              </div>
+              {canUseNotification && notificationPermission !== "granted" && (
+                <button
+                  type="button"
+                  onClick={requestNotification}
+                  className="rounded border border-terminal-accent/40 px-2 py-1 text-terminal-accent hover:bg-terminal-accent/10"
+                >
+                  브라우저 알림 켜기
+                </button>
+              )}
+              {notificationPermission === "granted" && <div className="text-terminal-green">브라우저 알림 켜짐</div>}
+            </div>
+          </section>
+
           <section className="rounded border border-terminal-border bg-terminal-panel">
             <div className="flex items-center gap-2 border-b border-terminal-border px-3 py-2 text-xs font-mono text-terminal-text-primary">
               <Target size={13} className="text-terminal-accent" />
@@ -196,7 +241,10 @@ export function MonitorPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setAlerts((prev) => prev.filter((item) => item.id !== alert.id))}
+                      onClick={() => {
+                        setAlerts((prev) => prev.filter((item) => item.id !== alert.id));
+                        setNotifiedIds((prev) => { const next = new Set(prev); next.delete(alert.id); return next; });
+                      }}
                       className="text-terminal-text-dim hover:text-terminal-red"
                       title="삭제"
                     >

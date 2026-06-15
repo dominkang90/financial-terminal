@@ -4,10 +4,25 @@ import { aiApi } from "@/api/client";
 import { useMarketStore } from "@/store/marketStore";
 import { useSettingsStore } from "@/store/settingsStore";
 
+interface AIEvidence {
+  symbol?: string;
+  method?: string;
+  price?: number | null;
+  currency?: string | null;
+  price_source?: string;
+  news_count?: number;
+  news_titles?: string[];
+  checked_at?: string;
+  transcript_used?: boolean;
+  transcript_note?: string;
+  disclaimer?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   method?: string;
+  evidence?: AIEvidence;
 }
 
 function buildWelcomeMessage(symbol: string, hasGemini = false) {
@@ -16,6 +31,49 @@ function buildWelcomeMessage(symbol: string, hasGemini = false) {
     ? "Gemini와 앱의 시장 데이터를 함께 참고합니다."
     : "Gemini가 연결되지 않아 규칙과 기본 지표 중심으로 답합니다.";
   return `안녕하세요! 저는 FinTerminal 분석 도우미입니다.\n\n현재 선택된 종목: **${symbol}**\n현재 모드: **${mode}**\n\n${basis}\n투자 추천이 아니라 참고용 설명입니다. 종목 분석, 뉴스 요약, 투자 개념 설명을 도와드릴게요.`;
+}
+
+function formatEvidenceTime(value?: string) {
+  if (!value) return "방금 전";
+  try {
+    return new Date(value).toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "확인 시각 미상";
+  }
+}
+
+function EvidenceBox({ evidence }: { evidence?: AIEvidence }) {
+  if (!evidence) return null;
+  const priceText = typeof evidence.price === "number"
+    ? `${evidence.currency === "KRW" ? "₩" : "$"}${evidence.price.toLocaleString(undefined, { maximumFractionDigits: evidence.currency === "KRW" ? 0 : 2 })}`
+    : "가격 확인 중";
+  const rows = [
+    ["사용한 가격", `${evidence.symbol || "선택 종목"} ${priceText} · ${evidence.price_source || "앱 시장 데이터"}`],
+    ["사용한 뉴스", `${evidence.news_count ?? 0}개 확인${evidence.news_titles?.[0] ? ` · ${evidence.news_titles[0]}` : ""}`],
+    ["기준 시각", `${formatEvidenceTime(evidence.checked_at)} KST`],
+    ["자막 사용", evidence.transcript_used ? "사용함" : (evidence.transcript_note || "사용 안 함")],
+    ["주의", evidence.disclaimer || "투자 추천이 아니라 참고용 설명입니다."],
+  ];
+
+  return (
+    <div className="mt-2 rounded border border-terminal-accent/20 bg-terminal-accent/5 p-2">
+      <div className="mb-1 text-[10px] font-mono font-semibold text-terminal-accent">AI 분석 근거</div>
+      <div className="space-y-1">
+        {rows.map(([label, value]) => (
+          <div key={label} className="grid grid-cols-[72px_1fr] gap-2 text-[10px] font-mono leading-4">
+            <span className="text-terminal-text-dim">{label}</span>
+            <span className="text-terminal-text-secondary">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function AIAssistant() {
@@ -64,7 +122,7 @@ export function AIAssistant() {
       const res = await aiApi.chat(text, activeSymbol, geminiApiKey || undefined);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: res.reply, method: res.method },
+        { role: "assistant", content: res.reply, method: res.method, evidence: res.evidence },
       ]);
     } catch {
       setMessages((prev) => [
@@ -83,7 +141,7 @@ export function AIAssistant() {
       setMessages((prev) => [
         ...prev,
         { role: "user", content: `${activeSymbol} 종목 분석해줘` },
-        { role: "assistant", content: res.analysis, method: res.method },
+        { role: "assistant", content: res.analysis, method: res.method, evidence: res.evidence },
       ]);
     } catch {
       setMessages((prev) => [
@@ -162,6 +220,7 @@ export function AIAssistant() {
               <p className="text-xs font-mono text-terminal-text-primary whitespace-pre-wrap leading-relaxed">
                 {msg.content}
               </p>
+              {msg.role === "assistant" && msg.method !== "system" && <EvidenceBox evidence={msg.evidence} />}
             </div>
           </div>
         ))}

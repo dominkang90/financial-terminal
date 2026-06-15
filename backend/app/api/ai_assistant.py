@@ -42,7 +42,10 @@ async def analyze(req: AnalyzeRequest, user_id: Optional[int] = Depends(get_curr
 @router.post("/chat")
 async def chat(req: ChatRequest, user_id: Optional[int] = Depends(get_current_user_id)):
     context = {}
+    news = []
     if req.symbol:
-        context["symbol"] = req.symbol
-        context["quote"] = await get_quote(req.symbol.upper())
-    return await chat_with_ai(req.message, context, req.api_key)
+        symbol = req.symbol.upper()
+        context["symbol"] = symbol
+        context["quote"] = await get_quote(symbol)
+        news = await get_news(symbol, limit=5)
+    return await chat_with_ai(req.message, context, req.api_key, news=news)

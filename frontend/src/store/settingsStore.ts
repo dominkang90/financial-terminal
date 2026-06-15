@@ -13,6 +13,7 @@ interface SettingsState {
   autoRefreshInterval: number; // seconds
   showPaperTradingBadge: boolean;
   defaultQuoteDisplay: "KRW" | "NATIVE";
+  beginnerMode: boolean;
   symbolCurrencyOverrides: Record<string, "KRW" | "NATIVE">;
   setTheme: (theme: "dark" | "light") => void;
   setGeminiKey: (key: string) => void;
@@ -22,6 +23,7 @@ interface SettingsState {
   setDefaultPortfolioId: (id: number) => void;
   setAutoRefreshInterval: (s: number) => void;
   setDefaultQuoteDisplay: (mode: "KRW" | "NATIVE") => void;
+  setBeginnerMode: (enabled: boolean) => void;
   setSymbolCurrencyOverride: (symbol: string, mode: "KRW" | "NATIVE") => void;
   clearSymbolCurrencyOverride: (symbol: string) => void;
 }
@@ -40,6 +42,7 @@ export const useSettingsStore = create<SettingsState>()(
       autoRefreshInterval: 30,
       showPaperTradingBadge: true,
       defaultQuoteDisplay: "KRW",
+      beginnerMode: true,
       symbolCurrencyOverrides: {},
       setTheme: (theme) => set({ theme }),
       setGeminiKey: (key) => set({ geminiApiKey: key }),
@@ -50,6 +53,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaultPortfolioId: (id) => set({ defaultPortfolioId: id }),
       setAutoRefreshInterval: (s) => set({ autoRefreshInterval: s }),
       setDefaultQuoteDisplay: (mode) => set({ defaultQuoteDisplay: mode }),
+      setBeginnerMode: (enabled) => set({ beginnerMode: enabled }),
       setSymbolCurrencyOverride: (symbol, mode) =>
         set((state) => ({
           symbolCurrencyOverrides: {

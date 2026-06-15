@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   BarChart2, Briefcase, BookOpen, Wrench, Bot, Shield,
-  LogIn, LogOut, Settings, Bell, User, ChevronDown, Sun, Moon,
+  LogIn, LogOut, Settings, Bell, User, ChevronDown, Sun, Moon, GraduationCap,
 } from "lucide-react";
 import type { TabId } from "@/types";
 import { useAuthStore } from "@/store/authStore";
@@ -30,7 +30,7 @@ export const NAV_ITEMS: { id: TabId; label: string; labelKo: string; icon: typeo
 
 export function TopBar({ activeTab, onTabChange }: TopBarProps) {
   const { user, accessToken, logout } = useAuthStore();
-  const { theme, setTheme } = useSettingsStore();
+  const { theme, setTheme, beginnerMode, setBeginnerMode } = useSettingsStore();
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -84,6 +84,18 @@ export function TopBar({ activeTab, onTabChange }: TopBarProps) {
 
         {/* 우측 액션 */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => setBeginnerMode(!beginnerMode)}
+            className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono transition-colors ${
+              beginnerMode
+                ? "border-terminal-accent text-terminal-accent bg-terminal-accent/10"
+                : "border-terminal-border text-terminal-text-dim hover:text-terminal-text-primary"
+            }`}
+            title="초보자 모드: 어려운 용어를 쉬운 말로 보여줘요"
+          >
+            <GraduationCap size={12} />
+            초보자
+          </button>
           <button
             onClick={() => onTabChange("monitor")}
             className={`p-1.5 rounded hover:bg-terminal-border ${activeTab === "monitor" ? "text-terminal-accent" : "text-terminal-text-dim hover:text-terminal-text-primary"}`}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, TrendingUp, TrendingDown, PieChart } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown, PieChart, ShieldAlert, WalletCards } from "lucide-react";
 import { portfolioApi } from "@/api/client";
 import type { Position, PortfolioSummary } from "@/types";
 import { useAuthStore } from "@/store/authStore";
@@ -16,6 +16,58 @@ const DEMO_POSITIONS = [
   { symbol: "MSFT", name: "Microsoft", weight: "20%", pnl: "+1.9%" },
   { symbol: "CASH", name: "현금", weight: "15%", pnl: "대기" },
 ];
+
+function buildPortfolioInsights(positions: Position[], summary?: PortfolioSummary) {
+  const total = summary?.total_market_value || positions.reduce((sum, pos) => sum + (pos.market_value || 0), 0);
+  const sorted = [...positions].sort((a, b) => (b.market_value || 0) - (a.market_value || 0));
+  const top = sorted[0];
+  const topWeight = total > 0 && top ? (top.market_value / total) * 100 : 0;
+  const risky = positions.filter((pos) => (pos.pnl_pct ?? 0) <= -3 || pos.quote_status === "no_data");
+  const movers = positions.filter((pos) => Math.abs(pos.pnl_pct ?? 0) >= 3).slice(0, 3);
+  const sectors = positions.reduce<Record<string, number>>((acc, pos) => {
+    const key = pos.sector || "기타";
+    acc[key] = (acc[key] || 0) + (pos.market_value || 0);
+    return acc;
+  }, {});
+  const mainSector = Object.entries(sectors).sort((a, b) => b[1] - a[1])[0];
+
+  return {
+    allocation: top ? `${top.symbol} 비중 ${topWeight.toFixed(0)}% · ${mainSector ? `${mainSector[0]} 중심` : "분산 확인 중"}` : "종목을 추가하면 자산 비중을 보여줘요",
+    todayPnl: summary ? `${summary.total_pnl >= 0 ? "+" : ""}$${formatNumber(summary.total_pnl)} · ${summary.total_pnl_pct >= 0 ? "+" : ""}${summary.total_pnl_pct.toFixed(2)}%` : "손익 계산 대기 중",
+    risk: risky.length > 0 ? `${risky.length}개 종목 주의 필요` : "큰 손실/데이터 없음 종목 없음",
+    concentration: topWeight >= 40 ? `${top?.symbol}에 많이 몰려 있어요` : "쏠림 위험은 낮은 편이에요",
+    newsImpact: movers.length > 0 ? `${movers.map((pos) => pos.symbol).join(", ")} 뉴스/가격 변화 확인` : "뉴스 영향 큰 종목은 아직 없어요",
+  };
+}
+
+function PortfolioInsightPanel({ positions, summary }: { positions: Position[]; summary?: PortfolioSummary }) {
+  const insights = buildPortfolioInsights(positions, summary);
+  const items = [
+    { label: "내 자산 비중", value: insights.allocation },
+    { label: "오늘 손익", value: insights.todayPnl },
+    { label: "위험 종목", value: insights.risk },
+    { label: "쏠림 확인", value: insights.concentration },
+    { label: "뉴스 영향", value: insights.newsImpact },
+  ];
+
+  return (
+    <div className="border-b border-terminal-border bg-terminal-bg/30 p-3">
+      <div className="mb-2 flex items-center gap-2 text-xs font-mono text-terminal-text-primary">
+        <ShieldAlert size={13} className="text-terminal-accent" />
+        포트폴리오 핵심 체크
+        <span className="ml-auto text-[10px] text-terminal-text-dim">투자 추천 아님</span>
+      </div>
+      <div className="grid gap-2 md:grid-cols-5">
+        {items.map((item) => (
+          <div key={item.label} className="rounded border border-terminal-border bg-terminal-panel px-3 py-2">
+            <div className="text-[10px] font-mono text-terminal-text-dim">{item.label}</div>
+            <div className="mt-1 text-[11px] font-mono leading-4 text-terminal-text-secondary">{item.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Portfolio() {
   const { user } = useAuthStore();
@@ -109,6 +161,27 @@ export function Portfolio() {
             <SummaryCard label="예시 수익률" value="+5.08%" color="text-terminal-green" />
           </div>
 
+          <div className="rounded-xl border border-terminal-border bg-terminal-panel p-4">
+            <div className="mb-3 flex items-center gap-2 text-xs font-mono text-terminal-text-primary">
+              <WalletCards size={14} className="text-terminal-accent" />
+              데모 포트폴리오 핵심 체크
+            </div>
+            <div className="grid gap-2 sm:grid-cols-5">
+              {[
+                ["내 자산 비중", "AAPL 35% · NVDA 30%"],
+                ["오늘 손익", "+$6,210 · +5.08%"],
+                ["위험 종목", "큰 손실 종목 없음"],
+                ["쏠림 확인", "기술주 비중이 높아요"],
+                ["뉴스 영향", "AI/반도체 뉴스 확인"],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded border border-terminal-border bg-terminal-bg/40 px-3 py-2">
+                  <div className="text-[10px] font-mono text-terminal-text-dim">{label}</div>
+                  <div className="mt-1 text-[11px] font-mono leading-4 text-terminal-text-secondary">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-xl border border-terminal-border bg-terminal-panel overflow-hidden">
             <div className="px-3 py-2 border-b border-terminal-border text-2xs font-mono text-terminal-text-dim">
               데모 구성 — 실제 투자 추천이 아니라 화면 예시입니다
@@ -200,6 +273,8 @@ export function Portfolio() {
           />
         </div>
       )}
+
+      <PortfolioInsightPanel positions={positions} summary={summary} />
 
       {/* 포지션 추가 폼 */}
       {showAddForm && (

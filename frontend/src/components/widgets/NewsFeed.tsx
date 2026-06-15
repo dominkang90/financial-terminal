@@ -127,6 +127,7 @@ function NewsCard({ article }: { article: NewsArticle }) {
   const SentimentIcon = sentiment.icon;
   const title = showEn ? article.title : (article.title_ko || article.title);
   const summary = showEn ? article.summary : (article.summary_ko || article.summary);
+  const summaryText = summary?.trim() || "요약이 없는 기사예요. 제목과 출처를 먼저 확인해보세요.";
   const isVideo = article.media_type === "video";
   const mainUrl = isVideo ? (article.video_url || article.url) : article.url;
   const showLogo = Boolean(article.source_logo && !logoError);
@@ -172,11 +173,9 @@ function NewsCard({ article }: { article: NewsArticle }) {
           </div>
         </div>
 
-        {summary && (
-          <p className="text-xs text-terminal-text-secondary leading-relaxed line-clamp-3 min-h-[3.75rem]">
-            {summary}
-          </p>
-        )}
+        <p className={`text-xs leading-relaxed line-clamp-3 min-h-[3.75rem] ${summary?.trim() ? "text-terminal-text-secondary" : "text-terminal-text-dim"}`}>
+          {summaryText}
+        </p>
 
         <div className="rounded-lg border border-terminal-border bg-terminal-bg/55 px-2 py-1.5 text-[11px] leading-4 text-terminal-text-secondary">
           <span className="font-mono text-terminal-accent">왜 봐요? </span>{whyImportant}

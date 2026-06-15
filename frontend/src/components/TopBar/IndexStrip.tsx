@@ -84,17 +84,19 @@ export function IndexStrip() {
           );
         }
 
+        const isUnreliable = Boolean(q.data_quality_warning);
+
         return (
           <div
             key={key}
             className="flex items-center gap-1.5 min-w-fit cursor-default"
-            title={`출처: ${q.data_source || "제공처 확인 중"} · 상태: ${getDataStatusLabel(q.data_status)} · 확인: ${updatedAt || "확인 중"}`}
+            title={`출처: ${q.data_source || "제공처 확인 중"} · 상태: ${getDataStatusLabel(q.data_status)} · ${q.data_quality_warning || ""} · 확인: ${updatedAt || "확인 중"}`}
           >
             <span className="text-2xs text-terminal-text-secondary font-mono">{label}</span>
             <span className="text-xs font-mono text-terminal-text-primary">
-              {q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "확인 중"}
+              {isUnreliable ? "확인 필요" : q.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "확인 중"}
             </span>
-            <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />
+            {!isUnreliable && <ChangeValue value={q.change_pct ?? 0} suffix="%" className="text-2xs" />}
             {q.data_status && <DataStatusBadge status={q.data_status} className="hidden lg:inline" />}
           </div>
         );

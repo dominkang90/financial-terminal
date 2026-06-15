@@ -3,13 +3,15 @@ import { TrendingUp, TrendingDown, Minus, RefreshCw, Activity, Search, Newspaper
 import { motion } from "framer-motion";
 import { marketApi, newsApi } from "@/api/client";
 import { useSettingsStore } from "@/store/settingsStore";
-import type { TabId, VideoNewsResponse } from "@/types";
+import type { DataStatus, TabId, VideoNewsResponse } from "@/types";
 
 interface IndexCard {
   label: string;
   value: number | null;
   change: number | null;
   change_pct: number | null;
+  data_status?: DataStatus;
+  data_quality_warning?: string;
 }
 
 function fmt(v: number | null | undefined, decimals = 2): string {
@@ -41,16 +43,17 @@ function changeMagnitude(pct: number | null): number {
   return Math.min(Math.abs(pct ?? 0) / 3 * 100, 100);
 }
 
-function MarketCard({ label, value, change, change_pct, index }: IndexCard & { index: number }) {
-  const up   = (change_pct ?? 0) > 0;
-  const down = (change_pct ?? 0) < 0;
+function MarketCard({ label, value, change, change_pct, data_quality_warning, index }: IndexCard & { index: number }) {
+  const unreliable = Boolean(data_quality_warning);
+  const up   = !unreliable && (change_pct ?? 0) > 0;
+  const down = !unreliable && (change_pct ?? 0) < 0;
   const isVix = label === "VIX";
 
   const accentClass = up ? "bg-terminal-green" : down ? "bg-terminal-red" : "bg-terminal-gray";
   const textClass   = up ? "text-terminal-green" : down ? "text-terminal-red" : "text-terminal-text-dim";
   const bgClass     = up ? "bg-terminal-green/5" : down ? "bg-terminal-red/5" : "";
   const Icon        = up ? TrendingUp : down ? TrendingDown : Minus;
-  const magnitude   = changeMagnitude(change_pct);
+  const magnitude   = unreliable ? 0 : changeMagnitude(change_pct);
   const vix         = isVix && value != null ? vixLabel(value) : null;
 
   return (
@@ -72,8 +75,14 @@ function MarketCard({ label, value, change, change_pct, index }: IndexCard & { i
 
         {/* 가격 */}
         <div className="text-sm font-mono font-bold text-terminal-text-primary mb-0.5">
-          {value != null ? fmt(value) : "—"}
+          {unreliable ? "확인 필요" : value != null ? fmt(value) : "—"}
         </div>
+
+        {unreliable && (
+          <div className="mb-1 text-[9px] font-mono text-terminal-yellow" title={data_quality_warning}>
+            제공처 재확인 필요
+          </div>
+        )}
 
         {/* VIX 특별 표시 */}
         {vix && (
@@ -84,9 +93,11 @@ function MarketCard({ label, value, change, change_pct, index }: IndexCard & { i
 
         {/* 변화율 */}
         <div className={`text-[11px] font-mono ${textClass} mb-2`}>
-          {change_pct != null
-            ? `${up ? "+" : ""}${change_pct.toFixed(2)}%`
-            : "—"}
+          {unreliable
+            ? "숫자 재확인 중"
+            : change_pct != null
+              ? `${up ? "+" : ""}${change_pct.toFixed(2)}%`
+              : "—"}
         </div>
 
         {/* 강도 바 */}
@@ -152,6 +163,7 @@ function BriefChip({ label, value, tone = "neutral" }: { label: string; value: s
 function TrustNote() {
   const notes = [
     "숫자는 제공처 최근가라 지연될 수 있어요.",
+    "값이나 변동률이 평소 범위를 벗어나면 확인 필요로 낮춰 보여줘요.",
     "뉴스/영상 요약은 원문 제목·내용·자막 여부를 기준으로 나눠 보여줘요.",
     "AI 설명은 참고용이에요. 매수·매도 결정은 스스로 확인해야 해요.",
   ];
@@ -159,7 +171,7 @@ function TrustNote() {
   return (
     <div className="rounded-xl border border-terminal-border bg-terminal-panel p-3">
       <div className="mb-2 text-[10px] font-mono text-terminal-accent uppercase tracking-widest">믿고 보기 위한 안내</div>
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-4">
         {notes.map((note) => (
           <div key={note} className="rounded-lg border border-terminal-border bg-terminal-bg/35 px-3 py-2 text-[11px] leading-5 text-terminal-text-secondary">
             {note}
@@ -407,6 +419,8 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
     value: obj[key]?.price ?? null,
     change: obj[key]?.change ?? null,
     change_pct: obj[key]?.change_pct ?? null,
+    data_status: obj[key]?.data_status,
+    data_quality_warning: obj[key]?.data_quality_warning,
   });
 
   // 장 상태
@@ -423,7 +437,9 @@ export function HomePage({ onTabChange }: { onTabChange: (tab: TabId) => void })
   const comCards  = ["Gold", "Oil", "Silver"].map((k) => q(commodities, k)).filter((c) => c.value != null);
 
   // 전체 시장 분위기 (평균 변화율 기반)
-  const allChanges = [...usCards, ...krCards].map((c) => c.change_pct ?? 0);
+  const allChanges = [...usCards, ...krCards]
+    .filter((c) => !c.data_quality_warning)
+    .map((c) => c.change_pct ?? 0);
   const avgChange  = allChanges.length ? allChanges.reduce((a, b) => a + b, 0) / allChanges.length : 0;
   const marketMood = avgChange > 0.3 ? "강세" : avgChange < -0.3 ? "약세" : "혼조";
   const moodColor  = avgChange > 0.3 ? "text-terminal-green" : avgChange < -0.3 ? "text-terminal-red" : "text-terminal-yellow";

@@ -51,6 +51,19 @@ RATE_TICKERS = {
     "US30Y": "^TYX",
 }
 
+# 지수는 개별 종목보다 하루 변동이 훨씬 작아요.
+# 제공처가 잘못된 값을 주면 숫자는 보존하되, UI가 "확인 필요"로 낮춰 보여줄 수 있게 표시합니다.
+INDEX_SANITY_RANGES = {
+    "KOSPI": (1000, 6000),
+    "KOSDAQ": (400, 2000),
+    "SPX": (2000, 12000),
+    "NDX": (6000, 50000),
+    "DJIA": (15000, 80000),
+    "RUT": (800, 6000),
+    "VIX": (5, 100),
+}
+INDEX_DAILY_MOVE_LIMIT = 7.0
+
 YAHOO_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -460,12 +473,37 @@ async def get_batch_quotes(symbols: List[str]) -> Dict[str, Any]:
     return results
 
 
+def _mark_index_quality(name: str, quote: Dict[str, Any]) -> Dict[str, Any]:
+    guarded = dict(quote or {})
+    if guarded.get("data_status") == "error":
+        return guarded
+
+    warnings = []
+    price = _safe_float(guarded.get("price"), 0.0)
+    change_pct = _safe_float(guarded.get("change_pct"), 0.0)
+    min_price, max_price = INDEX_SANITY_RANGES.get(name, (0, float("inf")))
+
+    if price <= 0:
+        warnings.append("가격 값이 비어 있어요.")
+    elif price < min_price or price > max_price:
+        warnings.append(f"{name} 값이 평소 범위 밖이라 제공처 재확인이 필요해요.")
+
+    if abs(change_pct) > INDEX_DAILY_MOVE_LIMIT:
+        warnings.append(f"{name} 하루 변동률이 크게 보여 제공처 재확인이 필요해요.")
+
+    if warnings:
+        guarded["data_status"] = "stale"
+        guarded["data_quality_warning"] = " ".join(warnings)
+        guarded["note"] = f"{guarded.get('note') or '시장 데이터'} · {guarded['data_quality_warning']}"
+    return guarded
+
+
 async def get_indices() -> Dict[str, Any]:
     if "indices" in _index_cache:
         return _index_cache["indices"]
     results = {}
     for name, ticker in INDEX_TICKERS.items():
-        results[name] = await get_quote(ticker)
+        results[name] = _mark_index_quality(name, await get_quote(ticker))
     _index_cache["indices"] = results
     return results
 

@@ -39,9 +39,31 @@ function getAlertStatus(alert: PriceAlert, price?: number) {
 function alertUsefulness(alert: PriceAlert, price?: number) {
   if (typeof price !== "number") return "현재가가 들어오면 목표가와 거리를 계산해요.";
   const distance = Math.abs((alert.target - price) / price) * 100;
-  if (distance < 1) return "현재가와 아주 가까워요. 곧 울릴 수 있어요.";
-  if (distance < 5) return "가까운 목표라 단기 확인용으로 쓸 수 있어요.";
-  return "거리가 있어 자주 울리기보다 큰 변화 확인용에 가까워요.";
+  if (distance < 1) return "설정가와 아주 가까워요. 알림이 오면 관련 정보를 차분히 확인해요.";
+  if (distance < 5) return "가까운 기준이라 자주 확인하지 않아도 흐름을 놓치지 않게 도와줘요.";
+  return "거리가 있어 자주 울리기보다 큰 변화가 생겼는지 확인하는 용도예요.";
+}
+
+function AlertGuideCard() {
+  const guides = [
+    ["무엇을 알려요?", "목표가 도달, 하루 3% 이상 급변, 가격 데이터 없음처럼 확인이 필요한 변화만 보여줘요."],
+    ["얼마나 자주 봐요?", "관심종목 가격은 30초마다 확인하고, 같은 목표가 알림은 한 번만 울려요."],
+    ["왜 쓸모 있나요?", "가격을 계속 쳐다보지 않고, 내가 정한 기준에 가까워졌을 때 다시 볼 수 있어요."],
+  ];
+
+  return (
+    <div className="rounded border border-terminal-accent/25 bg-terminal-accent/5 p-2">
+      <div className="mb-2 text-[10px] font-mono text-terminal-accent">초보자용 알림 안내</div>
+      <div className="grid gap-2">
+        {guides.map(([label, value]) => (
+          <div key={label} className="rounded border border-terminal-border bg-terminal-bg/45 px-2 py-1.5">
+            <div className="text-[10px] font-mono text-terminal-text-primary">{label}</div>
+            <div className="mt-0.5 text-[10px] leading-4 text-terminal-text-dim">{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function MonitorPage() {
@@ -86,7 +108,7 @@ export function MonitorPage() {
       const quote = quotes[alert.symbol];
       if (notificationPermission === "granted") {
         new Notification(`FinTerminal 알림: ${alert.symbol}`, {
-          body: `목표가 ${formatNumber(alert.target, 2)}에 도달했어요. 현재가 ${quote ? formatNumber(quote.price, 2) : "확인 중"}`,
+          body: `설정한 기준가 ${formatNumber(alert.target, 2)}에 도달했어요. 현재가 ${quote ? formatNumber(quote.price, 2) : "확인 중"}. 매매 신호가 아니라 확인 알림이에요.`,
         });
       }
       setNotifiedIds((prev) => new Set(prev).add(alert.id));
@@ -181,13 +203,14 @@ export function MonitorPage() {
               알림 센터
             </div>
             <div className="space-y-2 text-[11px] font-mono text-terminal-text-secondary">
-              <div>관심종목 급등락, 목표가 도달, AI 위험 신호를 한곳에서 확인해요.</div>
+              <div>관심종목 급등락, 목표가 도달, AI 확인 항목을 한곳에서 확인해요.</div>
               <div className="rounded border border-terminal-border bg-terminal-bg px-2 py-1 text-terminal-text-dim">
                 현재 자동 감시: 목표가 도달 {hitAlerts.length}개 · 급변 종목 {monitorRows.filter(({ quote }) => Math.abs(quote?.change_pct ?? 0) >= 3).length}개 · 확인 주기 30초
                 <DataFreshnessLine checkedAt={lastCheckedAt} source="관심종목 가격 제공처" status="delayed" className="mt-1" />
               </div>
+              <AlertGuideCard />
               <div className="rounded border border-terminal-border bg-terminal-bg/40 px-2 py-1 leading-5 text-terminal-text-dim">
-                꼭 필요한 알림만 남겼어요: 목표가 도달, 하루 3% 이상 급변, 데이터 없음 상태입니다. 뉴스 요약은 알림 대신 화면에서 확인하게 했어요.
+                알림은 매수·매도 신호가 아니에요. 설정한 가격에 가까워졌을 때 뉴스, 가격 흐름, 내 투자 목적을 다시 확인하도록 돕는 기능입니다.
               </div>
               {canUseNotification && notificationPermission !== "granted" && (
                 <button
@@ -207,6 +230,9 @@ export function MonitorPage() {
               <Target size={13} className="text-terminal-accent" />
               목표가 알림
               <span className="ml-auto text-[10px] text-terminal-text-dim">{hitAlerts.length}개 도달</span>
+            </div>
+            <div className="border-b border-terminal-border px-3 py-2 text-[11px] leading-5 text-terminal-text-dim">
+              목표가는 “거래하라는 신호”가 아니라 “다시 확인할 가격”이에요. 알림이 오면 바로 행동하기보다 관련 정보와 내 기준을 함께 살펴보세요.
             </div>
             <form onSubmit={addAlert} className="space-y-2 border-b border-terminal-border p-3">
               <div className="grid grid-cols-[1fr_1fr] gap-2">
@@ -235,7 +261,7 @@ export function MonitorPage() {
                 </select>
                 <button type="submit" className="inline-flex items-center gap-1 rounded bg-terminal-accent px-2 py-1 text-xs font-mono font-semibold text-black">
                   <Plus size={12} />
-                  추가
+                  확인 알림 추가
                 </button>
               </div>
             </form>

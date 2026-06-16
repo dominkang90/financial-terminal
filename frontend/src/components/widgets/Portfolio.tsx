@@ -22,50 +22,69 @@ function buildPortfolioInsights(positions: Position[], summary?: PortfolioSummar
   const sorted = [...positions].sort((a, b) => (b.market_value || 0) - (a.market_value || 0));
   const top = sorted[0];
   const topWeight = total > 0 && top ? (top.market_value / total) * 100 : 0;
-  const risky = positions.filter((pos) => (pos.pnl_pct ?? 0) <= -3 || pos.quote_status === "no_data");
-  const movers = positions.filter((pos) => Math.abs(pos.pnl_pct ?? 0) >= 3).slice(0, 3);
+  const lossCount = positions.filter((pos) => (pos.pnl_pct ?? 0) <= -3).length;
+  const missingDataCount = positions.filter((pos) => pos.quote_status === "no_data").length;
   const sectors = positions.reduce<Record<string, number>>((acc, pos) => {
     const key = pos.sector || "기타";
     acc[key] = (acc[key] || 0) + (pos.market_value || 0);
     return acc;
   }, {});
   const mainSector = Object.entries(sectors).sort((a, b) => b[1] - a[1])[0];
+  const mainSectorWeight = total > 0 && mainSector ? (mainSector[1] / total) * 100 : 0;
+  const issueCount = [topWeight >= 40, mainSectorWeight >= 55, lossCount > 0, missingDataCount > 0].filter(Boolean).length;
 
   return {
-    allocation: top ? `${top.symbol} 비중 ${topWeight.toFixed(0)}% · ${mainSector ? `${mainSector[0]} 중심` : "분산 확인 중"}` : "종목을 추가하면 자산 비중을 보여줘요",
-    todayPnl: summary ? `${summary.total_pnl >= 0 ? "+" : ""}$${formatNumber(summary.total_pnl)} · ${summary.total_pnl_pct >= 0 ? "+" : ""}${summary.total_pnl_pct.toFixed(2)}%` : "손익 계산 대기 중",
-    risk: risky.length > 0 ? `${risky.length}개 종목은 손실이나 데이터 상태를 확인해요` : "큰 손실/데이터 없음 종목은 아직 없어요",
-    concentration: topWeight >= 40 ? `${top?.symbol} 비중이 커서 한 종목 영향이 커요` : "한 종목에 크게 몰리지는 않았어요",
-    newsImpact: movers.length > 0 ? `${movers.map((pos) => pos.symbol).join(", ")}는 가격 변화 이유를 확인해요` : "뉴스 영향이 크게 보이는 종목은 아직 없어요",
-    nextCheck: topWeight >= 40 ? "팔라는 뜻이 아니라 비중을 알고 보자는 뜻이에요" : "새 행동보다 현재 구성을 이해하는 단계예요",
+    status: positions.length === 0 ? "종목을 추가하면 점검을 시작해요" : issueCount > 0 ? `확인할 점 ${issueCount}개` : "전반적으로 차분한 구성이에요",
+    concentration: topWeight >= 40
+      ? `${top?.symbol} 비중이 ${topWeight.toFixed(0)}%라 한 종목 움직임이 크게 보일 수 있어요.`
+      : "한 종목에 과하게 몰린 모습은 아직 크지 않아요.",
+    sector: mainSectorWeight >= 55
+      ? `${mainSector?.[0]} 쪽 비중이 ${mainSectorWeight.toFixed(0)}%라 같은 뉴스에 함께 움직일 수 있어요.`
+      : mainSector
+        ? `${mainSector[0]} 중심이지만, 한 업종만 보이는 상태는 아니에요.`
+        : "업종 정보가 들어오면 쏠림을 더 자세히 볼 수 있어요.",
+    pnl: summary
+      ? summary.total_pnl >= 0
+        ? `현재 손익은 +${summary.total_pnl_pct.toFixed(2)}%예요. 수익보다 구성 이유를 같이 보면 좋아요.`
+        : `현재 손익은 ${summary.total_pnl_pct.toFixed(2)}%예요. 손실 원인을 단정하지 말고 숫자와 뉴스를 같이 확인해요.`
+      : "손익 계산을 기다리는 중이에요.",
+    check: lossCount > 0 || missingDataCount > 0
+      ? `${lossCount > 0 ? `손실 폭이 큰 종목 ${lossCount}개` : "큰 손실 종목은 아직 없어요"} · ${missingDataCount > 0 ? `가격 확인 필요 ${missingDataCount}개` : "가격 데이터는 대체로 들어왔어요"}`
+      : "큰 손실이나 가격 데이터 빈칸은 아직 눈에 띄지 않아요.",
+    nextCheck: topWeight >= 40
+      ? "오늘은 비중이 큰 종목의 뉴스와 가격 기준을 먼저 확인해보세요. 사거나 팔라는 뜻은 아니에요."
+      : "새 행동보다 내 구성이 투자 목적과 맞는지 먼저 확인해보세요.",
   };
 }
 
 function PortfolioInsightPanel({ positions, summary }: { positions: Position[]; summary?: PortfolioSummary }) {
   const insights = buildPortfolioInsights(positions, summary);
   const items = [
-    { label: "내 자산 비중", value: insights.allocation },
-    { label: "오늘 손익", value: insights.todayPnl },
-    { label: "위험 종목", value: insights.risk },
-    { label: "쏠림 확인", value: insights.concentration },
-    { label: "뉴스 영향", value: insights.newsImpact },
-    { label: "다음 확인", value: insights.nextCheck },
+    { label: "쏠림", title: "한 자산에 너무 몰려 있지 않나요?", value: insights.concentration },
+    { label: "업종", title: "같은 분야에 많이 모였나요?", value: insights.sector },
+    { label: "손익", title: "손익을 차분히 볼 수 있나요?", value: insights.pnl },
+    { label: "확인", title: "손실/데이터를 확인했나요?", value: insights.check },
   ];
 
   return (
     <div className="border-b border-terminal-border bg-terminal-bg/30 p-3">
-      <div className="mb-2 flex items-center gap-2 text-xs font-mono text-terminal-text-primary">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-terminal-text-primary">
         <ShieldAlert size={13} className="text-terminal-accent" />
-        포트폴리오 핵심 체크
+        포트폴리오 건강검진
+        <span className="rounded border border-terminal-accent/30 bg-terminal-accent/10 px-2 py-0.5 text-[10px] text-terminal-accent">{insights.status}</span>
         <span className="ml-auto text-[10px] text-terminal-text-dim">투자 추천 아님</span>
       </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="rounded border border-terminal-border bg-terminal-panel px-3 py-2">
-            <div className="text-[10px] font-mono text-terminal-text-dim">{item.label}</div>
+            <div className="text-[10px] font-mono text-terminal-accent">{item.label}</div>
+            <div className="mt-1 text-xs font-semibold text-terminal-text-primary">{item.title}</div>
             <div className="mt-1 text-[11px] font-mono leading-4 text-terminal-text-secondary">{item.value}</div>
           </div>
         ))}
+      </div>
+      <div className="mt-2 rounded border border-terminal-border bg-terminal-bg/40 px-3 py-2 text-[11px] leading-5 text-terminal-text-dim">
+        오늘의 확인할 점: {insights.nextCheck} 이 건강검진은 내 포트폴리오를 이해하기 위한 안내예요.
       </div>
     </div>
   );
@@ -164,24 +183,28 @@ export function Portfolio() {
           </div>
 
           <div className="rounded-xl border border-terminal-border bg-terminal-panel p-4">
-            <div className="mb-3 flex items-center gap-2 text-xs font-mono text-terminal-text-primary">
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-mono text-terminal-text-primary">
               <WalletCards size={14} className="text-terminal-accent" />
-              데모 포트폴리오 핵심 체크
+              데모 포트폴리오 건강검진
+              <span className="rounded border border-terminal-accent/30 bg-terminal-accent/10 px-2 py-0.5 text-[10px] text-terminal-accent">확인할 점 2개</span>
+              <span className="ml-auto text-[10px] text-terminal-text-dim">투자 추천 아님</span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                ["내 자산 비중", "AAPL 35% · NVDA 30%"],
-                ["오늘 손익", "+$6,210 · +5.08%"],
-                ["위험 종목", "큰 손실 종목 없음"],
-                ["쏠림 확인", "기술주 비중이 높아요"],
-                ["뉴스 영향", "AI/반도체 뉴스 확인"],
-                ["다음 확인", "바로 행동보다 구성을 이해해요"],
-              ].map(([label, value]) => (
+                ["쏠림", "한 자산에 너무 몰려 있지 않나요?", "AAPL과 NVDA 비중이 커서 기술주 움직임이 크게 보일 수 있어요."],
+                ["업종", "같은 분야에 많이 모였나요?", "데모 구성은 기술주 중심이에요. 같은 뉴스에 함께 움직일 수 있어요."],
+                ["손익", "손익을 차분히 볼 수 있나요?", "예시 손익은 +5.08%예요. 수익보다 구성 이유를 같이 보면 좋아요."],
+                ["여유", "바로 쓸 수 있는 현금이 있나요?", "현금 15%가 예시로 남아 있어요. 실제 계좌에서는 비상금 여부를 따로 확인해요."],
+              ].map(([label, title, value]) => (
                 <div key={label} className="rounded border border-terminal-border bg-terminal-bg/40 px-3 py-2">
-                  <div className="text-[10px] font-mono text-terminal-text-dim">{label}</div>
+                  <div className="text-[10px] font-mono text-terminal-accent">{label}</div>
+                  <div className="mt-1 text-xs font-semibold text-terminal-text-primary">{title}</div>
                   <div className="mt-1 text-[11px] font-mono leading-4 text-terminal-text-secondary">{value}</div>
                 </div>
               ))}
+            </div>
+            <div className="mt-2 rounded border border-terminal-border bg-terminal-bg/40 px-3 py-2 text-[11px] leading-5 text-terminal-text-dim">
+              오늘의 확인할 점: 실제 계좌에서는 비중이 큰 자산이 내 투자 목적과 맞는지 확인해보세요. 사거나 팔라는 뜻은 아니에요.
             </div>
           </div>
 
